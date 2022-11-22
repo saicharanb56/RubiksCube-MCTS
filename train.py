@@ -4,14 +4,14 @@ import torch
 from model import NNet
 import gym
 import argparse
-from rubikscube import cube
+from rubikscube import Cube
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--batch_size', default=10000, type=int)
 parser.add_argument('--lr', default=1e-3, type=float)
 parser.add_argument('--niter', default=1000, type=int, help='Number of ADI iterations M')
-parser.add_argument('--nscrambles', default=20, type=int, help='Number of scrambles of cube')
+parser.add_argument('--nscrambles', default=100, type=int, help='Number of scrambles of cube')
 parser.add_argument('--nstates', default=100, type=int, help='Number of scrambled cubes N')
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
@@ -21,42 +21,55 @@ def init_weights(m):
     if isinstance(m, nn.Linear):
         torch.nn.init.xavier_uniform(m.weight)
 
-def adi(args, model, env, lossfn_prob, lossfn_val, optimizer, n_actions=12):
+def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
     '''
     Performs Autodidactic iteration and trains the neural network
     Args:
     args:           from argparser
     model:          neural network model
-    env:            Rubiks cube environment
+    cube:            Rubiks cube environment
     lossfn_prob:    Loss function of probs
     lossfn_val:     Loss function of value
     optimizer:      Optimizer (RMSProp)
-    n_actions:      Quarter-turn metric, hence, n_actions is by 12 as default
+    n_actions:      Quarter-turn metric, hence, n_actions is 12 as default
     '''
-    assert n_actions == 12 or n_actions == 16
+    assert n_actions == 12 or n_actions == 18
+    assert cube.is_solved()
+
+    # save solved state
+    solved_state = cube.get_state()
 
     for _ in range(args.niter):
         # initialize list of labels. This will be a list of dictionaries.
         # each dict will have keys "value" and "probs" to be used during training 
         labels = []
 
-        # generate N scrambled states; each state is a 24 x 20 array
-        scrambled_states = np.zeros((24, 20, args.nstates))
+        # generate N scrambled states
+        scrambled_states = []
 
         for j in range(args.nstates):
             # intialize probs, values for all child states of state
-            p_all_actions = np.zeros((len(n_actions), len(n_actions)))
-            v_all_actions = np.zeros(len(n_actions))
+            p_all_actions = np.zeros(n_actions, n_actions)
+            v_all_actions = np.zeros(n_actions)
             
             # initialize rewards array
-            rewards_all_actions = np.zeros(len(n_actions))
+            rewards_all_actions = np.zeros(n_actions)
 
             # define state, current_state is stored in env instance
-            scrambled_states[:,:,j] = env.reset(args.nscrambles)
+            cube.scramble(args.nscrambles)
+            cur_state = cube.get_state()
+            scrambled_states.append(cur_state)
 
             # for each action in n_actions, we will generate the next_state
             for action in n_actions:
-                next_state, reward = env.step(action)
+                # perform action
+                cube.turn(action)
+                
+                # define next state, reward
+                next_state = cube.get_state()
+                reward = 1 if cube.solved() else -1
+
+                # forward pass
                 p_action, v_action = model(next_state)
 
                 # update array elements
@@ -64,11 +77,17 @@ def adi(args, model, env, lossfn_prob, lossfn_val, optimizer, n_actions=12):
                 v_all_actions[action] = v_action
                 rewards_all_actions[action] = reward
 
+                # set state back to initial state
+                cube.set_state(cur_state)
+
             # set labels to be maximal value from each children state
             v_label = np.max(rewards_all_actions + v_all_actions)
             p_label = p_all_actions[:,np.argmax(rewards_all_actions + v_all_actions)]
 
             labels.append({"value": v_label, "probs": p_label})
+
+            # set cube back to solved state
+            cube.set_state(solved_state)
 
         # initialize weights using Glorot/Xavier initialization
         init_weights(model)
@@ -78,10 +97,13 @@ def adi(args, model, env, lossfn_prob, lossfn_val, optimizer, n_actions=12):
 
             optimizer.zero_grad()
 
-            state = scrambled_states[:,:,i]
+            state = scrambled_states[i]
+            cube.set_state(state)
+            input = cube.representation()
+            input.dtype = np.int8
             value, probs = labels[i]["value"], labels[i]["probs"]
 
-            probs_pred, val_pred = model(state)
+            probs_pred, val_pred = model(input)
             loss_prob = lossfn_prob(probs_pred, probs)
             loss_val = lossfn_val(val_pred, value)
 
@@ -106,8 +128,8 @@ if __name__ == "_main__":
     lossfn_prob = nn.CrossEntropyLoss()
 
     #Instantiate env
-    env = gym.make('cube')
+    cube = Cube.cube_qtm()
 
-    model = adi(args, model, env, lossfn_prob, lossfn_val, optimizer)
+    model = adi(args, model, cube, lossfn_prob, lossfn_val, optimizer)
 
     # run the MCTS tree search here

@@ -3,6 +3,7 @@
 
 # maturin develop --features python
 # (from inside the git repo and activated virtual env)
+import numpy as np
 
 from rubikscube import Cube
 
@@ -12,22 +13,28 @@ print("The text repr of the cube")
 print(cube)  # text repr of cube
 
 print("\nThe numpy repr of the cube")
-print(cube.representation())  # vector repr of cube state
+rep = cube.representation()
+rep.dtype = np.int8
+print(rep)  # vector repr of cube state
+print(type(rep))
 
-print("All possible turns, they correspond to 0-11 for qtm and 0-17 for htm")
-print(cube.all_possible_turns())  # the action space
+# print("All possible turns, they correspond to 0-11 for qtm and 0-17 for htm")
+# print(cube.all_possible_turns())  # the action space
 
-print("Performing a L turn")
-cube.turn(0)  # a L turn
+# print("Performing a L turn")
+# cube.turn(0)  # a L turn
 
-print("Saving cube state")
-print(cube)
-state = cube.get_state()  # save cube state
+# print("Saving cube state")
+# print(cube)
+# state = cube.get_state()  # save cube state
 
-print("Scrambling 1000 times")
-cube.scramble(1000)  # perform 1000 random moves
-print(cube)
+# print("Scrambling 1000 times")
+# cube.scramble(1000)  # perform 1000 random moves
+# print(cube)
 
-print("Restoring cube from before scramble")
-cube.set_state(state)
-print(cube)  # same as the saved state
+# print("Restoring cube from before scramble")
+# cube.set_state(state)
+# print(cube)  # same as the saved state
+
+# print("Format of state is: ")
+# print(state)
