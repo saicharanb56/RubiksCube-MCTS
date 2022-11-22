@@ -1,0 +1,8 @@
+/target
+.python-version
+Cargo.lock
+*.pln
+*.onnx
+*.graph
+
+**/__pycache__
