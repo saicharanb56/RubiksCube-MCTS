@@ -4,7 +4,7 @@ import torch
 from model import NNet
 import gym
 import argparse
-from rcube.rubikscube import cube
+from rubikscube import cube
 
 parser = argparse.ArgumentParser()
 
