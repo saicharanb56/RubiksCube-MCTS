@@ -23,8 +23,8 @@ class SaveBestPolicyModel:
                     os.remove(os.path.join(args.save_path, file))
             
             self.best_loss = current_loss
-            print(f"\nBest loss: {self.best_loss}")
-            print(f"\nSaving best policy model for epoch: {epoch+1}\n")
+            # print(f"Best loss: {self.best_loss}")
+            print(f"Saving best policy model for epoch: {epoch+1}\n")
             state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(),
                      'ce_losses': ce_losses, 'mse_losses': mse_losses, 'epoch': epoch}   
             torch.save(state, os.path.join(args.save_path, 'best_policy_checkpoint_' + str(epoch+1) + '.pt'))
@@ -51,8 +51,8 @@ class SaveBestValueModel:
                     os.remove(os.path.join(args.save_path, file))
             
             self.best_loss = current_loss
-            print(f"\nBest loss: {self.best_loss}")
-            print(f"\nSaving best value model for epoch: {epoch+1}\n")
+            # print(f"Best loss: {self.best_loss}")
+            print(f"Saving best value model for epoch: {epoch+1}\n")
             state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(),
                      'ce_losses': ce_losses, 'mse_losses': mse_losses, 'epoch': epoch}   
             torch.save(state, os.path.join(args.save_path, 'best_val_checkpoint_' + str(epoch+1) + '.pt'))
