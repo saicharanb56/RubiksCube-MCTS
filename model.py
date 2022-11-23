@@ -13,7 +13,7 @@ class NNet(nn.Module):
         # define fc layers for probability outputs
         self.fc3a = nn.Linear(2048, 512)
         self.prob_out = nn.Linear(512, 12)
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=0)
 
         # define fc layers for value output
         self.fc3b = nn.Linear(2048, 512)
