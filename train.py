@@ -13,9 +13,9 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--batch_size', default=10000, type=int)
 parser.add_argument('--lr', default=1e-3, type=float)
-parser.add_argument('--nepochs', default=1000, type=int, help='Number of ADI epochs (M)')
-parser.add_argument('--nscrambles', default=100, type=int, help='Number of scrambles of cube (k)')
-parser.add_argument('--nsequences', default=100, type=int, help='Number of sequences of scrambles (l)')
+parser.add_argument('--nepochs', default=4000, type=int, help='Number of ADI epochs (M)')
+parser.add_argument('--nscrambles', default=25, type=int, help='Number of scrambles of cube (k)')
+parser.add_argument('--nsequences', default=200, type=int, help='Number of sequences of scrambles (l)')
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
@@ -132,7 +132,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
             cube = Cube.cube_qtm()
 
         # training loop
-        ce_loss, mse_loss = []
+        ce_loss, mse_loss = [], []
         for i in range(len(scrambled_states)):
 
             optimizer.zero_grad()
@@ -175,8 +175,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
         # save this epoch's model and delete previous epoch's model
         state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(),
-                     'ce_losses': losses_ce_perepoch, 'mse_losses': losses_mse_perepoch, 'epoch': epoch}   
-        torch.save(state, os.path.join(args.save_path, 'best_policy_checkpoint_' + str(epoch+1) + '.pt'))
+                     'ce_losses': losses_ce_perepoch, 'mse_losses': losses_mse_perepoch, 'epoch': epoch}
+        torch.save(state, os.path.join(args.save_path, 'checkpoint_' + str(epoch+1) + '.pt'))
         if os.path.exists(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt')):
             os.remove(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt'))
 
