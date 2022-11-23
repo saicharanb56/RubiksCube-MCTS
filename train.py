@@ -3,21 +3,27 @@ from torch import nn, optim
 import torch
 from model import NNet
 import argparse
+import os
 import time
 from rubikscube import Cube
+
+from utils import SaveBestPolicyModel, SaveBestValueModel
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--batch_size', default=10000, type=int)
 parser.add_argument('--lr', default=1e-3, type=float)
-parser.add_argument('--niter', default=1000, type=int, help='Number of ADI iterations M')
-parser.add_argument('--nscrambles', default=100, type=int, help='Number of scrambles of cube')
-parser.add_argument('--nstates', default=100, type=int, help='Number of scrambled cubes N')
+parser.add_argument('--nepochs', default=1000, type=int, help='Number of ADI epochs (M)')
+parser.add_argument('--nscrambles', default=100, type=int, help='Number of scrambles of cube (k)')
+parser.add_argument('--nsequences', default=100, type=int, help='Number of sequences of scrambles (l)')
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
 parser.add_argument('--tau', default=0.1, type=float, help="Interpolation parameter in soft update")
 parser.add_argument('--device', default="cuda", type=str)
+
+parser.add_argument('--resume_path', default=None, type=str, help="Path of model dict to resume from")
+parser.add_argument('--save_path', default="/home/saicharanb56/RubiksCube-MCTS/results/", type=str, help="Folder in which results are stored")
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
@@ -52,13 +58,25 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
     assert n_actions == 12 or n_actions == 18
     assert cube.solved()
 
-    # save solved state
-    solved_state = cube.get_state()
+    # instantiate saveBestModels
+    saveBestPolicyModel = SaveBestPolicyModel()
+    saveBestValModel = SaveBestValueModel()
 
     # initialize weights using Glorot/Xavier initialization
-    init_weights(model)
+    if args.resume:
+        resume_state = torch.load(args.resume, map_location=args.device)
+        model.load_state_dict(resume_state['state_dict'])
+        optimizer.load_state_dict(resume_state['optimizer'])
+        ce_loss = resume_state['ce_losses']
+        mse_loss = resume_state['mse_losses']
+        startEpoch = resume_state['epoch'] + 1
+    else:
+        init_weights(model)
+        ce_loss = []
+        mse_loss = []
+        startEpoch = 0
 
-    for iter in range(args.niter):
+    for epoch in range(startEpoch, args.nepochs):
         tic = time.time()
 
         # initialize list of labels. This will be a list of dictionaries.
@@ -68,7 +86,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         # generate N scrambled states
         scrambled_states = []
 
-        for j in range(args.nstates):
+        for j in range(args.nsequences):
             # intialize probs, values for all child states of state
             p_all_actions = torch.zeros((n_actions, n_actions))
             v_all_actions = torch.zeros(n_actions)
@@ -77,45 +95,44 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
             rewards_all_actions = torch.zeros(n_actions)
 
             # define state, current_state is stored in env instance
-            cube.scramble(args.nscrambles)
-            cur_state = cube.get_state()
-            scrambled_states.append(cur_state)
+            for k in range(args.nscrambles):
+                cube.scramble(1)
+                cur_state = cube.get_state()
+                scrambled_states.append(cur_state)
 
-            # for each action in n_actions, we will generate the next_state
-            for action in range(n_actions):
-                # perform action
-                cube.turn(action)
-                
-                # define next state, reward
-                next_state = torch.tensor(cube.representation(), dtype=torch.float32, device=args.device)
-                reward = 1 if cube.solved() else -1
+                # for each action in n_actions, we will generate the next_state
+                for action in range(n_actions):
+                    # perform action
+                    cube.turn(action)
+                    
+                    # define next state, reward
+                    next_state = torch.tensor(cube.representation(), dtype=torch.float32, device=args.device)
+                    reward = 1 if cube.solved() else -1
 
-                # forward pass
-                with torch.no_grad():
-                    p_action, v_action = model(next_state)
+                    # forward pass
+                    with torch.no_grad():
+                        p_action, v_action = model(next_state)
 
-                    # update array elements
-                    p_all_actions[:,action] = p_action
-                    v_all_actions[action] = v_action
-                    rewards_all_actions[action] = reward
+                        # update array elements
+                        p_all_actions[:,action] = p_action
+                        v_all_actions[action] = v_action
+                        rewards_all_actions[action] = reward
 
-                # set state back to initial state
-                cube.set_state(cur_state)
+                    # set state back to initial state
+                    cube.set_state(cur_state)
 
-            # set labels to be maximal value from each children state
-            v_label = torch.max(rewards_all_actions + v_all_actions)
-            idx = torch.argmax(rewards_all_actions + v_all_actions)
-            p_label = p_all_actions[:,idx]
+                # set labels to be maximal value from each children state
+                v_label = torch.max(rewards_all_actions + v_all_actions)
+                idx = torch.argmax(rewards_all_actions + v_all_actions)
+                p_label = p_all_actions[:,idx]
 
-            labels.append({"value": v_label, "probs": p_label})
+                labels.append({"value": v_label, "probs": p_label})
 
             # set cube back to solved state
-            cube.set_state(solved_state)
+            cube = Cube.cube_qtm()
 
         # training loop
-        ce_loss = []
-        mse_loss = []
-        for i in range(args.nstates):
+        for i in range(len(scrambled_states)):
 
             optimizer.zero_grad()
 
@@ -142,12 +159,23 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         print('Epoch: [{0}]\t'
                 'CE Loss {1:.4f}\t'
                 'MSE Loss: {2:.4f}  T: {3:.2f}\n'.format(
-                    iter+1, np.mean(ce_loss),
+                    epoch+1, np.mean(ce_loss),
                     np.mean(mse_loss), time.time() - tic 
                 ))
 
 
         soft_update(model, model_target, tau=args.tau)
+
+        # save best models
+        saveBestPolicyModel(args, ce_loss[-1], epoch, model, optimizer, ce_loss, mse_loss)
+        saveBestValModel(args, mse_loss[-1], epoch, model, optimizer, ce_loss, mse_loss)
+
+        # save this epoch's model and delete previous epoch's model
+        state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(),
+                     'ce_losses': ce_loss, 'mse_losses': mse_loss, 'epoch': epoch}   
+        torch.save(state, os.path.join(args.save_path, 'best_policy_checkpoint_' + str(epoch+1) + '.pt'))
+        if os.path.exists(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt')):
+            os.remove(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt'))
 
     return model
 
