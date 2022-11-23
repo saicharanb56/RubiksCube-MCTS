@@ -15,6 +15,7 @@ parser.add_argument('--nstates', default=100, type=int, help='Number of scramble
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
+parser.add_argument('--device', default="cuda", type=str)
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
@@ -98,8 +99,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
 
             state = scrambled_states[i]
             cube.set_state(state)
-            input = cube.representation()
-            input.dtype = np.int8
+            input = torch.tensor(cube.representation(), dtype=torch.int16)
             value, probs = labels[i]["value"], labels[i]["probs"]
 
             probs_pred, val_pred = model(input)
@@ -117,7 +117,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
 if __name__ == "__main__":
 
     args = parser.parse_args()
-    device = torch.device("cuda")
+    device = torch.device(args.device)
 
     # Instantiate model, optimizer, loss functions
     model = NNet()
