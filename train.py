@@ -66,7 +66,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
                 cube.turn(action)
                 
                 # define next state, reward
-                next_state = torch.tensor(cube.representation, dtype=torch.int16)
+                next_state = torch.tensor(cube.representation(), dtype=torch.float32, device=args.device)
                 reward = 1 if cube.solved() else -1
 
                 # forward pass

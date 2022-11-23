@@ -23,8 +23,7 @@ class NNet(nn.Module):
         self.elu = nn.ELU(alpha=1.0)
 
     def forward(self, x):
-        x = torch.reshape(x, (20, 24))
-        # x is of shape (20,24)
+        # x is of shape (480,)
         x = self.elu(self.fc1(x))
         x = self.elu(self.fc2(x))
 
