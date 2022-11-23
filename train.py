@@ -49,8 +49,8 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
 
         for j in range(args.nstates):
             # intialize probs, values for all child states of state
-            p_all_actions = np.zeros((n_actions, n_actions))
-            v_all_actions = np.zeros(n_actions)
+            p_all_actions = torch.zeros((n_actions, n_actions))
+            v_all_actions = torch.zeros(n_actions)
             
             # initialize rewards array
             rewards_all_actions = np.zeros(n_actions)
@@ -73,16 +73,17 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
                 p_action, v_action = model(next_state)
 
                 # update array elements
-                p_all_actions[:,action] = p_action.detach().cpu().numpy()
-                v_all_actions[action] = v_action.detach().cpu().numpy()
+                p_all_actions[:,action] = p_action
+                v_all_actions[action] = v_action
                 rewards_all_actions[action] = reward
 
                 # set state back to initial state
                 cube.set_state(cur_state)
 
             # set labels to be maximal value from each children state
-            v_label = np.max(rewards_all_actions + v_all_actions)
-            p_label = p_all_actions[:,np.argmax(rewards_all_actions + v_all_actions)]
+            v_label = torch.max(rewards_all_actions + v_all_actions)
+            idx = torch.argmax(rewards_all_actions + v_all_actions)
+            p_label = p_all_actions[:,idx]
 
             labels.append({"value": v_label, "probs": p_label})
 
