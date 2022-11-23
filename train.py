@@ -170,12 +170,12 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         soft_update(model, model_target, tau=args.tau)
 
         # save best models
-        saveBestPolicyModel(args, np.mean(ce_loss), epoch, model, optimizer, ce_loss, mse_loss)
-        saveBestValModel(args, np.mean(mse_loss), epoch, model, optimizer, ce_loss, mse_loss)
+        saveBestPolicyModel(args, np.mean(ce_loss), epoch, model, optimizer, losses_ce_perepoch, losses_mse_perepoch)
+        saveBestValModel(args, np.mean(mse_loss), epoch, model, optimizer, losses_ce_perepoch, losses_mse_perepoch)
 
         # save this epoch's model and delete previous epoch's model
         state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(),
-                     'ce_losses': ce_loss, 'mse_losses': mse_loss, 'epoch': epoch}   
+                     'ce_losses': losses_ce_perepoch, 'mse_losses': losses_mse_perepoch, 'epoch': epoch}   
         torch.save(state, os.path.join(args.save_path, 'best_policy_checkpoint_' + str(epoch+1) + '.pt'))
         if os.path.exists(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt')):
             os.remove(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt'))
