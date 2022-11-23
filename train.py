@@ -89,7 +89,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
                 # forward pass
                 with torch.no_grad():
-                    p_action, v_action = model(next_state).detach()
+                    p_action, v_action = model(next_state)
 
                     # update array elements
                     p_all_actions[:,action] = p_action
@@ -123,9 +123,10 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
             probs_pred, val_pred = model_target(input_state)
             loss_prob = lossfn_prob(probs_pred, probs)
-            loss_val = lossfn_val(val_pred, value)
+            
+            loss_val = lossfn_val(val_pred[0], value)
 
-            loss_prob.backward()
+            loss_prob.backward(retain_graph=True)
             loss_val.backward()
 
             optimizer.step()
