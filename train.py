@@ -66,15 +66,15 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
                 cube.turn(action)
                 
                 # define next state, reward
-                next_state = cube.get_state()
+                next_state = torch.tensor(cube.representation, dtype=torch.int16)
                 reward = 1 if cube.solved() else -1
 
                 # forward pass
                 p_action, v_action = model(next_state)
 
                 # update array elements
-                p_all_actions[:,action] = p_action
-                v_all_actions[action] = v_action
+                p_all_actions[:,action] = p_action.numpy()
+                v_all_actions[action] = v_action.numpy()
                 rewards_all_actions[action] = reward
 
                 # set state back to initial state
