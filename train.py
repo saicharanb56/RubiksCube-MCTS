@@ -53,6 +53,9 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
     # save solved state
     solved_state = cube.get_state()
 
+    # initialize weights using Glorot/Xavier initialization
+    init_weights(model)
+
     for iter in range(args.niter):
         # initialize list of labels. This will be a list of dictionaries.
         # each dict will have keys "value" and "probs" to be used during training 
@@ -85,7 +88,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
                 reward = 1 if cube.solved() else -1
 
                 # forward pass
-                p_action, v_action = model(next_state)
+                p_action, v_action = model(next_state).detach()
 
                 # update array elements
                 p_all_actions[:,action] = p_action
@@ -104,9 +107,6 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
             # set cube back to solved state
             cube.set_state(solved_state)
-
-        # initialize weights using Glorot/Xavier initialization
-        init_weights(model)
 
         # training loop
         model.train()
