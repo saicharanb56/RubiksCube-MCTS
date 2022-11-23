@@ -3,6 +3,7 @@ from torch import nn, optim
 import torch
 from model import NNet
 import argparse
+import time
 from rubikscube import Cube
 
 parser = argparse.ArgumentParser()
@@ -58,6 +59,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
     init_weights(model)
 
     for iter in range(args.niter):
+        tic = time.time()
+
         # initialize list of labels. This will be a list of dictionaries.
         # each dict will have keys "value" and "probs" to be used during training 
         labels = []
@@ -89,7 +92,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
                 # forward pass
                 with torch.no_grad():
-                    p_action, v_action = model(next_state).detach()
+                    p_action, v_action = model(next_state)
 
                     # update array elements
                     p_all_actions[:,action] = p_action
@@ -110,6 +113,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
             cube.set_state(solved_state)
 
         # training loop
+        ce_loss = []
+        mse_loss = []
         for i in range(args.nstates):
 
             optimizer.zero_grad()
@@ -125,10 +130,21 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
             loss_prob = lossfn_prob(probs_pred, probs)
             loss_val = lossfn_val(val_pred, value)
 
-            loss_prob.backward()
+            loss_prob.backward(retain_graph=True)
             loss_val.backward()
 
             optimizer.step()
+
+            ce_loss.append(loss_prob.data.item())
+            mse_loss.append(loss_val.data.item())
+
+        print('Epoch: [{0}]\t'
+                'CE Loss {1:.4f}\t'
+                'MSE Loss: {2:.4f}  T: {3:.2f}\n'.format(
+                    iter+1, np.mean(ce_loss),
+                    np.mean(mse_loss), time.time() - tic 
+                ))
+
 
         soft_update(model, model_target, tau=args.tau)
 
