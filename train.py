@@ -67,13 +67,13 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         resume_state = torch.load(args.resume_path, map_location=args.device)
         model.load_state_dict(resume_state['state_dict'])
         optimizer.load_state_dict(resume_state['optimizer'])
-        ce_loss = resume_state['ce_losses']
-        mse_loss = resume_state['mse_losses']
+        losses_ce_perepoch = resume_state['ce_losses']
+        losses_mse_perepoch = resume_state['mse_losses']
         startEpoch = resume_state['epoch'] + 1
     else:
         init_weights(model)
-        ce_loss = []
-        mse_loss = []
+        losses_ce_perepoch = []
+        losses_mse_perepoch = []
         startEpoch = 0
 
     for epoch in range(startEpoch, args.nepochs):
@@ -132,6 +132,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
             cube = Cube.cube_qtm()
 
         # training loop
+        ce_loss, mse_loss = []
         for i in range(len(scrambled_states)):
 
             optimizer.zero_grad()
@@ -156,19 +157,21 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
             ce_loss.append(loss_prob.data.item())
             mse_loss.append(loss_val.data.item())
 
+        losses_ce_perepoch.append(np.mean(ce_loss))
+        losses_mse_perepoch.append(np.mean(mse_loss))
         print('Epoch: [{0}]\t'
                 'CE Loss {1:.4f}\t'
                 'MSE Loss: {2:.4f}  T: {3:.2f}\n'.format(
-                    epoch+1, np.mean(ce_loss),
-                    np.mean(mse_loss), time.time() - tic 
+                    epoch+1, losses_ce_perepoch[-1],
+                    losses_mse_perepoch[-1], time.time() - tic 
                 ))
 
 
         soft_update(model, model_target, tau=args.tau)
 
         # save best models
-        saveBestPolicyModel(args, ce_loss[-1], epoch, model, optimizer, ce_loss, mse_loss)
-        saveBestValModel(args, mse_loss[-1], epoch, model, optimizer, ce_loss, mse_loss)
+        saveBestPolicyModel(args, np.mean(ce_loss), epoch, model, optimizer, ce_loss, mse_loss)
+        saveBestValModel(args, np.mean(mse_loss), epoch, model, optimizer, ce_loss, mse_loss)
 
         # save this epoch's model and delete previous epoch's model
         state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(),
