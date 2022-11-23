@@ -53,7 +53,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
             v_all_actions = torch.zeros(n_actions)
             
             # initialize rewards array
-            rewards_all_actions = np.zeros(n_actions)
+            rewards_all_actions = torch.zeros(n_actions)
 
             # define state, current_state is stored in env instance
             cube.scramble(args.nscrambles)
@@ -102,6 +102,8 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
             cube.set_state(state)
             input_state = torch.tensor(cube.representation(), dtype=torch.float32, device=args.device)
             value, probs = labels[i]["value"], labels[i]["probs"]
+
+            value, probs = value.to(args.device), probs.to(args.device)
 
             probs_pred, val_pred = model(input_state)
             loss_prob = lossfn_prob(probs_pred, probs)
