@@ -15,6 +15,7 @@ parser.add_argument('--nstates', default=100, type=int, help='Number of scramble
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
+parser.add_argument('--tau', default=0.1, type=float, help="Interpolation parameter in soft update")
 parser.add_argument('--device', default="cuda", type=str)
 
 def init_weights(m):
@@ -78,7 +79,6 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
             scrambled_states.append(cur_state)
 
             # for each action in n_actions, we will generate the next_state
-            model.eval()
             for action in range(n_actions):
                 # perform action
                 cube.turn(action)
@@ -88,12 +88,13 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
                 reward = 1 if cube.solved() else -1
 
                 # forward pass
-                p_action, v_action = model(next_state).detach()
+                with torch.no_grad():
+                    p_action, v_action = model(next_state).detach()
 
-                # update array elements
-                p_all_actions[:,action] = p_action
-                v_all_actions[action] = v_action
-                rewards_all_actions[action] = reward
+                    # update array elements
+                    p_all_actions[:,action] = p_action
+                    v_all_actions[action] = v_action
+                    rewards_all_actions[action] = reward
 
                 # set state back to initial state
                 cube.set_state(cur_state)
@@ -109,7 +110,6 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
             cube.set_state(solved_state)
 
         # training loop
-        model.train()
         for i in range(args.nstates):
 
             optimizer.zero_grad()
@@ -121,7 +121,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
             value, probs = value.to(args.device), probs.to(args.device)
 
-            probs_pred, val_pred = model(input_state)
+            probs_pred, val_pred = model_target(input_state)
             loss_prob = lossfn_prob(probs_pred, probs)
             loss_val = lossfn_val(val_pred, value)
 
@@ -130,7 +130,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
             optimizer.step()
 
-        soft_update(model, model_target, tau=0.001)
+        soft_update(model, model_target, tau=args.tau)
 
     return model
 
