@@ -63,8 +63,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
     saveBestValModel = SaveBestValueModel()
 
     # initialize weights using Glorot/Xavier initialization
-    if args.resume:
-        resume_state = torch.load(args.resume, map_location=args.device)
+    if args.resume_path:
+        resume_state = torch.load(args.resume_path, map_location=args.device)
         model.load_state_dict(resume_state['state_dict'])
         optimizer.load_state_dict(resume_state['optimizer'])
         ce_loss = resume_state['ce_losses']
