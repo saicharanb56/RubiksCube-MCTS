@@ -2,7 +2,6 @@ import numpy as np
 from torch import nn, optim
 import torch
 from model import NNet
-import gym
 import argparse
 from rubikscube import Cube
 
@@ -34,7 +33,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
     n_actions:      Quarter-turn metric, hence, n_actions is 12 as default
     '''
     assert n_actions == 12 or n_actions == 18
-    assert cube.is_solved()
+    assert cube.solved()
 
     # save solved state
     solved_state = cube.get_state()
@@ -49,7 +48,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
 
         for j in range(args.nstates):
             # intialize probs, values for all child states of state
-            p_all_actions = np.zeros(n_actions, n_actions)
+            p_all_actions = np.zeros((n_actions, n_actions))
             v_all_actions = np.zeros(n_actions)
             
             # initialize rewards array
@@ -61,7 +60,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
             scrambled_states.append(cur_state)
 
             # for each action in n_actions, we will generate the next_state
-            for action in n_actions:
+            for action in range(n_actions):
                 # perform action
                 cube.turn(action)
                 
@@ -115,7 +114,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
     return model
 
 
-if __name__ == "_main__":
+if __name__ == "__main__":
 
     args = parser.parse_args()
     device = torch.device("cuda")
@@ -130,6 +129,8 @@ if __name__ == "_main__":
     #Instantiate env
     cube = Cube.cube_qtm()
 
+    print('ADI started')
     model = adi(args, model, cube, lossfn_prob, lossfn_val, optimizer)
+    print('ADI done')
 
     # run the MCTS tree search here
