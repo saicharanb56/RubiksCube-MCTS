@@ -21,12 +21,26 @@ def init_weights(m):
     if isinstance(m, nn.Linear):
         torch.nn.init.xavier_uniform(m.weight)
 
-def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
+def soft_update(local_model, target_model, tau):
+        """Soft update model parameters.
+        θ_target = τ*θ_local + (1 - τ)*θ_target
+        Params
+        =======
+            local model (PyTorch model): weights will be copied from
+            target model (PyTorch model): weights will be copied to
+            tau (float): interpolation parameter
+        """
+        for target_param, local_param in zip(target_model.parameters(),
+                                           local_model.parameters()):
+            target_param.data.copy_(tau*local_param.data + (1-tau)*target_param.data)
+
+def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
     '''
     Performs Autodidactic iteration and trains the neural network
     Args:
     args:           from argparser
     model:          neural network model
+    model_target:   target neural network model
     cube:            Rubiks cube environment
     lossfn_prob:    Loss function of probs
     lossfn_val:     Loss function of value
@@ -39,7 +53,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
     # save solved state
     solved_state = cube.get_state()
 
-    for _ in range(args.niter):
+    for iter in range(args.niter):
         # initialize list of labels. This will be a list of dictionaries.
         # each dict will have keys "value" and "probs" to be used during training 
         labels = []
@@ -61,6 +75,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
             scrambled_states.append(cur_state)
 
             # for each action in n_actions, we will generate the next_state
+            model.eval()
             for action in range(n_actions):
                 # perform action
                 cube.turn(action)
@@ -94,6 +109,7 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
         init_weights(model)
 
         # training loop
+        model.train()
         for i in range(args.nstates):
 
             optimizer.zero_grad()
@@ -114,6 +130,8 @@ def adi(args, model, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
 
             optimizer.step()
 
+        soft_update(model, model_target, tau=0.001)
+
     return model
 
 
@@ -125,6 +143,10 @@ if __name__ == "__main__":
     # Instantiate model, optimizer, loss functions
     model = NNet()
     model = model.to(device)
+
+    model_target = NNet()
+    model_target = model_target.to(device)
+
     optimizer = optim.RMSprop(model.parameters(), lr=args.lr, weight_decay=args.wd, momentum=args.momentum)
     lossfn_val = nn.MSELoss()
     lossfn_prob = nn.CrossEntropyLoss()
@@ -133,7 +155,7 @@ if __name__ == "__main__":
     cube = Cube.cube_qtm()
 
     print('ADI started')
-    model = adi(args, model, cube, lossfn_prob, lossfn_val, optimizer)
+    model = adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer)
     print('ADI done')
 
     # run the MCTS tree search here
