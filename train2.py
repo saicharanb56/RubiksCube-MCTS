@@ -46,7 +46,8 @@ def generate_scrambled_states(args, cube):
     '''
     Generate and return N = K*L scrambled states as tuples
     '''
-    assert cube.solved()
+    if not cube.solved():
+        cube = Cube.cube_qtm()
 
     scrambled_states = []
     # generate list of scrambled_states
@@ -151,11 +152,10 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
             # set labels to be maximal value from each children state
             v_label, idx = torch.max(rewards_all_actions + v_out, dim=1)
-            idx = idx.unsqueeze(-1)
             idx = idx.repeat(1,n_actions)
             idx = idx.unsqueeze(1) # shape is (batch_size, 1, n_actions)
             p_label = torch.gather(p_out, dim=1, index=idx)
-            p_label.squeeze(1)
+            p_label = p_label.squeeze(1)
 
         # training
         input_states = generate_input_states(cube, scrambled_states)
@@ -164,7 +164,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         optimizer.zero_grad()
         
         probs_pred, val_pred = model_target(input_states)
-        
+
         loss_prob = lossfn_prob(probs_pred, p_label)
         loss_val = lossfn_val(val_pred, v_label)
 
@@ -177,8 +177,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         losses_mse.append(loss_val.data.item())
 
         print('Epoch: [{0}]\t'
-                'CE Loss {1:.4f}\t'
-                'MSE Loss: {2:.4f}  T: {3:.2f}\n'.format(
+                'CE Loss {1:.8f}\t'
+                'MSE Loss: {2:.8f}  T: {3:.2f}\n'.format(
                     epoch+1, losses_ce[-1],
                     losses_mse[-1], time.time() - tic 
                 ))
