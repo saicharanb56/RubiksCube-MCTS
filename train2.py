@@ -129,7 +129,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
             # initialize probs, values, rewards for all child states (next_states) of state
             # p_all_actions = torch.empty((batch_size, n_actions, n_actions))
             # v_all_actions = torch.empty(batch_size, n_actions)
-            rewards_all_actions = torch.zeros(batch_size, n_actions, 1)
+            rewards_all_actions = torch.zeros(batch_size, n_actions, 1, device=args.device)
 
             # for each action in n_actions, we will generate the next_state
             for action in range(n_actions):
