@@ -13,9 +13,9 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--batch_size', default=10000, type=int)
 parser.add_argument('--lr', default=1e-3, type=float)
-parser.add_argument('--nepochs', default=4000, type=int, help='Number of ADI epochs (M)')
+parser.add_argument('--nepochs', default=200, type=int, help='Number of ADI epochs (M)')
 parser.add_argument('--nscrambles', default=25, type=int, help='Number of scrambles of cube (k)')
-parser.add_argument('--nsequences', default=200, type=int, help='Number of sequences of scrambles (l)')
+parser.add_argument('--nsequences', default=4000, type=int, help='Number of sequences of scrambles (l)')
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
@@ -42,6 +42,41 @@ def soft_update(local_model, target_model, tau):
                                            local_model.parameters()):
             target_param.data.copy_(tau*local_param.data + (1-tau)*target_param.data)
 
+def generate_scrambled_states(args, cube):
+    '''
+    Generate and return N = K*L scrambled states as tuples
+    '''
+    assert cube.solved()
+
+    scrambled_states = []
+    # generate list of scrambled_states
+    for _ in range(args.nsequences):
+        # define state, current_state is stored in env instance
+        for _ in range(args.nscrambles):
+            cube.scramble(1)
+            cur_state = cube.get_state() # parent state for this iteration
+            # scrambled_states[idx, :] = torch.from_numpy(cube.representation()).float()
+            scrambled_states.append(cur_state)
+
+        # set cube back to solved state
+        cube = Cube.cube_qtm()
+
+    return scrambled_states
+
+def generate_input_states(cube, scrambled_states):
+    '''
+    Generate input states to network
+    Input is of shape (batch_size,) tuples
+    Output should be of shape (batch_size, 480) float
+    '''
+    input_states = torch.empty((len(scrambled_states), 480))
+
+    for i in range(len(scrambled_states)):
+        cube.set_state(scrambled_states[i])
+        input_states[i, :] = torch.tensor(cube.representation(), dtype=torch.float32)
+
+    return input_states
+
 def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_actions=12):
     '''
     Performs Autodidactic iteration and trains the neural network
@@ -67,115 +102,97 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         resume_state = torch.load(args.resume_path, map_location=args.device)
         model.load_state_dict(resume_state['state_dict'])
         optimizer.load_state_dict(resume_state['optimizer'])
-        losses_ce_perepoch = resume_state['ce_losses']
-        losses_mse_perepoch = resume_state['mse_losses']
+        losses_ce = resume_state['ce_losses']
+        losses_mse = resume_state['mse_losses']
         startEpoch = resume_state['epoch'] + 1
     else:
         init_weights(model)
-        losses_ce_perepoch = []
-        losses_mse_perepoch = []
+        init_weights(model_target)
+        losses_ce = []
+        losses_mse = []
         startEpoch = 0
 
     for epoch in range(startEpoch, args.nepochs):
         tic = time.time()
 
-        # initialize list of labels. This will be a list of dictionaries.
-        # each dict will have keys "value" and "probs" to be used during training 
-        labels = []
+        batch_size = args.nscrambles*args.nsequences
 
-        # generate N scrambled states
-        scrambled_states = []
+        # generate N = K*L scrambled states
+        scrambled_states = generate_scrambled_states(args, cube)
+        
+        next_states = torch.empty((batch_size, n_actions, 480), device=args.device)
+        for l in range(batch_size):
+            # set state
+            cur_state = scrambled_states[l]
+            cube.set_state(cur_state)
 
-        for j in range(args.nsequences):
-            # intialize probs, values for all child states of state
-            p_all_actions = torch.zeros((n_actions, n_actions))
-            v_all_actions = torch.zeros(n_actions)
-            
-            # initialize rewards array
-            rewards_all_actions = torch.zeros(n_actions)
+            # initialize probs, values, rewards for all child states (next_states) of state
+            # p_all_actions = torch.empty((batch_size, n_actions, n_actions))
+            # v_all_actions = torch.empty(batch_size, n_actions)
+            rewards_all_actions = torch.zeros(batch_size, n_actions, 1)
 
-            # define state, current_state is stored in env instance
-            for k in range(args.nscrambles):
-                cube.scramble(1)
-                cur_state = cube.get_state()
-                scrambled_states.append(cur_state)
+            # for each action in n_actions, we will generate the next_state
+            for action in range(n_actions):
+                # perform action
+                cube.turn(action)
+                
+                # define next state, reward
+                next_states[l, action, :] = torch.from_numpy(cube.representation()).float()
+                rewards_all_actions[l, action] = 1 if cube.solved() else -1
 
-                # for each action in n_actions, we will generate the next_state
-                for action in range(n_actions):
-                    # perform action
-                    cube.turn(action)
-                    
-                    # define next state, reward
-                    next_state = torch.tensor(cube.representation(), dtype=torch.float32, device=args.device)
-                    reward = 1 if cube.solved() else -1
+                # set state back to parent state
+                cube.set_state(cur_state)
 
-                    # forward pass
-                    with torch.no_grad():
-                        p_action, v_action = model(next_state)
+        # forward pass
+        with torch.no_grad():
+            p_out, v_out = model(next_states)
+            # p_out shape is (batch_size, n_actions, n_actions)
+            # v_out shape is (batch_size, n_actions, 1)
 
-                        # update array elements
-                        p_all_actions[:,action] = p_action
-                        v_all_actions[action] = v_action
-                        rewards_all_actions[action] = reward
+            # set labels to be maximal value from each children state
+            v_label, idx = torch.max(rewards_all_actions + v_out, dim=1)
+            idx = idx.unsqueeze(-1)
+            idx = idx.repeat(1,n_actions)
+            idx = idx.unsqueeze(1) # shape is (batch_size, 1, n_actions)
+            p_label = torch.gather(p_out, dim=1, index=idx)
+            p_label.squeeze(1)
 
-                    # set state back to initial state
-                    cube.set_state(cur_state)
+        # training
+        input_states = generate_input_states(cube, scrambled_states)
+        input_states = input_states.to(args.device)
 
-                # set labels to be maximal value from each children state
-                v_label = torch.max(rewards_all_actions + v_all_actions)
-                idx = torch.argmax(rewards_all_actions + v_all_actions)
-                p_label = p_all_actions[:,idx]
+        optimizer.zero_grad()
+        
+        probs_pred, val_pred = model_target(input_states)
+        
+        loss_prob = lossfn_prob(probs_pred, p_label)
+        loss_val = lossfn_val(val_pred, v_label)
 
-                labels.append({"value": v_label, "probs": p_label})
+        loss = loss_prob + loss_val
+        loss.backward()
 
-            # set cube back to solved state
-            cube = Cube.cube_qtm()
+        optimizer.step()
 
-        # training loop
-        ce_loss, mse_loss = [], []
-        for i in range(len(scrambled_states)):
+        losses_ce.append(loss_prob.data.item())
+        losses_mse.append(loss_val.data.item())
 
-            optimizer.zero_grad()
-
-            state = scrambled_states[i]
-            cube.set_state(state)
-            input_state = torch.tensor(cube.representation(), dtype=torch.float32, device=args.device)
-            value, probs = labels[i]["value"], labels[i]["probs"]
-
-            value, probs = value.to(args.device), probs.to(args.device)
-
-            probs_pred, val_pred = model_target(input_state)
-            
-            loss_prob = lossfn_prob(probs_pred, probs)
-            loss_val = lossfn_val(val_pred[0], value)
-
-            loss_prob.backward(retain_graph=True)
-            loss_val.backward()
-
-            optimizer.step()
-
-            ce_loss.append(loss_prob.data.item())
-            mse_loss.append(loss_val.data.item())
-
-        losses_ce_perepoch.append(np.mean(ce_loss))
-        losses_mse_perepoch.append(np.mean(mse_loss))
         print('Epoch: [{0}]\t'
                 'CE Loss {1:.4f}\t'
                 'MSE Loss: {2:.4f}  T: {3:.2f}\n'.format(
-                    epoch+1, losses_ce_perepoch[-1],
-                    losses_mse_perepoch[-1], time.time() - tic 
+                    epoch+1, losses_ce[-1],
+                    losses_mse[-1], time.time() - tic 
                 ))
 
 
         soft_update(model, model_target, tau=args.tau)
 
         # save best models
-        saveBestPolicyModel(args, np.mean(ce_loss), epoch, model, optimizer, losses_ce_perepoch, losses_mse_perepoch)
-        saveBestValModel(args, np.mean(mse_loss), epoch, model, optimizer, losses_ce_perepoch, losses_mse_perepoch)
+        saveBestPolicyModel(args, losses_ce[-1], epoch, model, optimizer, losses_ce, losses_mse)
+        saveBestValModel(args, losses_mse[-1], epoch, model, optimizer, losses_ce, losses_mse)
 
         # save this epoch's model and delete previous epoch's model
         state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(),
-                     'ce_losses': losses_ce_perepoch, 'mse_losses': losses_mse_perepoch, 'epoch': epoch}
+                     'ce_losses': losses_ce, 'mse_losses': losses_mse, 'epoch': epoch}
         torch.save(state, os.path.join(args.save_path, 'checkpoint_' + str(epoch+1) + '.pt'))
         if os.path.exists(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt')):
             os.remove(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt'))
