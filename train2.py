@@ -109,6 +109,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         saveBestPolicyModel = SaveBestPolicyModel(np.min(losses_ce))
         saveBestValModel = SaveBestValueModel(np.min(losses_mse))
     else:
+        print("This")
         init_weights(model)
         init_weights(model_target)
         losses_ce = []
@@ -156,7 +157,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         with torch.no_grad():
             p_out, v_out = model_target(next_states)
 
-            print("Probs mean: ", p_out.mean(dim=0))
+            # print("Probs mean: ", p_out.mean(dim=0))
+            print("Val mean: ", v_out.mean(dim=0))
 
             # set labels to be maximal value from each children state
             v_label, idx = torch.max(rewards_all_actions + v_out, dim=1)
