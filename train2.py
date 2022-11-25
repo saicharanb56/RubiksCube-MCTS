@@ -99,15 +99,21 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
     # initialize weights using Glorot/Xavier initialization
     if args.resume_path:
-        resume_state = torch.load(args.resume_path, map_location=args.device)
-        model.load_state_dict(resume_state['state_dict'])
-        # optimizer.load_state_dict(resume_state['optimizer'])
-        losses_ce = resume_state['ce_losses']
-        losses_mse = resume_state['mse_losses']
-        startEpoch = resume_state['epoch'] + 1
-        # instantiate saveBestModels with best loss being min of previous losses
-        saveBestPolicyModel = SaveBestPolicyModel(np.min(losses_ce))
-        saveBestValModel = SaveBestValueModel(np.min(losses_mse))
+        # resume_state = torch.load(args.resume_path, map_location=args.device)
+        # model.load_state_dict(resume_state['state_dict'])
+        # # optimizer.load_state_dict(resume_state['optimizer'])
+        # losses_ce = resume_state['ce_losses']
+        # losses_mse = resume_state['mse_losses']
+        # startEpoch = resume_state['epoch'] + 1
+        # # instantiate saveBestModels with best loss being min of previous losses
+        # saveBestPolicyModel = SaveBestPolicyModel(np.min(losses_ce))
+        # saveBestValModel = SaveBestValueModel(np.min(losses_mse))
+        model.load_state_dict(torch.load(args.resume_path))
+        losses_ce = []
+        losses_mse = []
+        idx1 = args.resume_path.index("checkpoint_")
+        idx2 = args.resume_path.index(".pt")
+        startEpoch = int(args.resume_path[idx1+11:idx2])
     else:
         init_weights(model)
         init_weights(model_target)
@@ -115,8 +121,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         losses_mse = []
         startEpoch = 0
         # instantiate saveBestModels
-        saveBestPolicyModel = SaveBestPolicyModel()
-        saveBestValModel = SaveBestValueModel()
+        # saveBestPolicyModel = SaveBestPolicyModel()
+        # saveBestValModel = SaveBestValueModel()
 
     model_target = model_target.to(args.device)
     model = model.to(args.device)
@@ -200,13 +206,17 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         soft_update(model, model_target, tau=args.tau)
 
         # save best models
-        saveBestPolicyModel(args, losses_ce[-1], epoch, model, optimizer, losses_ce, losses_mse)
-        saveBestValModel(args, losses_mse[-1], epoch, model, optimizer, losses_ce, losses_mse)
+        # saveBestPolicyModel(args, losses_ce[-1], epoch, model, optimizer, losses_ce, losses_mse)
+        # saveBestValModel(args, losses_mse[-1], epoch, model, optimizer, losses_ce, losses_mse)
 
-        # save this epoch's model and delete previous epoch's model
-        state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(),
-                     'ce_losses': losses_ce, 'mse_losses': losses_mse, 'epoch': epoch}
-        torch.save(state, os.path.join(args.save_path, 'checkpoint_' + str(epoch+1) + '.pt'))
+        # # save this epoch's model and delete previous epoch's model
+        # state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(),
+        #              'ce_losses': losses_ce, 'mse_losses': losses_mse, 'epoch': epoch}
+        # torch.save(state, os.path.join(args.save_path, 'checkpoint_' + str(epoch+1) + '.pt'))
+        # if os.path.exists(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt')):
+        #     os.remove(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt'))
+
+        torch.save(model.state_dict(), os.path.join(args.save_path, 'checkpoint_' + str(epoch+1) + '.pt'))
         if os.path.exists(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt')):
             os.remove(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt'))
 
