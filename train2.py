@@ -19,7 +19,7 @@ parser.add_argument('--nsequences', default=500, type=int, help='Number of seque
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
-parser.add_argument('--tau', default=0.1, type=float, help="Interpolation parameter in soft update")
+parser.add_argument('--tau', default=1, type=float, help="Interpolation parameter in soft update")
 parser.add_argument('--device', default="cuda", type=str)
 
 parser.add_argument('--resume_path', default=None, type=str, help="Path of model dict to resume from")
@@ -149,12 +149,9 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
                 cube.set_state(cur_state)
 
         print('{0:.10f}'.format(torch.mean(rewards_all_actions).item()))
-        # print(1 in rewards_all_actions)
         # forward pass
         with torch.no_grad():
-            p_out, v_out = model(next_states)
-            # p_out shape is (batch_size, n_actions, n_actions)
-            # v_out shape is (batch_size, n_actions, 1)
+            p_out, v_out = model_target(next_states)
 
             # set labels to be maximal value from each children state
             v_label, idx = torch.max(rewards_all_actions + v_out, dim=1)
@@ -169,7 +166,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
         optimizer.zero_grad()
         
-        probs_pred, val_pred = model_target(input_states)
+        probs_pred, val_pred = model(input_states)
 
         # calculate sample weighted losses
         loss_prob = lossfn_prob(probs_pred, p_label) * weights
