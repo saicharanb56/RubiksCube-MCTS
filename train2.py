@@ -180,8 +180,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
         optimizer.step()
 
-        losses_ce.append(loss_prob.data.item())
-        losses_mse.append(loss_val.data.item())
+        losses_ce.append(loss_prob.mean().data.item())
+        losses_mse.append(loss_val.mean().data.item())
 
         print('Epoch: [{0}]\t'
                 'CE Loss {1:.8f}\t'
