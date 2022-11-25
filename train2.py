@@ -15,7 +15,7 @@ parser.add_argument('--batch_size', default=10000, type=int)
 parser.add_argument('--lr', default=1e-3, type=float)
 parser.add_argument('--nepochs', default=200, type=int, help='Number of ADI epochs (M)')
 parser.add_argument('--nscrambles', default=25, type=int, help='Number of scrambles of cube (k)')
-parser.add_argument('--nsequences', default=4000, type=int, help='Number of sequences of scrambles (l)')
+parser.add_argument('--nsequences', default=1000, type=int, help='Number of sequences of scrambles (l)')
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
@@ -122,15 +122,12 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         scrambled_states = generate_scrambled_states(args, cube)
         
         next_states = torch.empty((batch_size, n_actions, 480), device=args.device)
+        rewards_all_actions = torch.full((batch_size, n_actions, 1), fill_value = -1.0, device=args.device)
+
         for l in range(batch_size):
             # set state
             cur_state = scrambled_states[l]
             cube.set_state(cur_state)
-
-            # initialize probs, values, rewards for all child states (next_states) of state
-            # p_all_actions = torch.empty((batch_size, n_actions, n_actions))
-            # v_all_actions = torch.empty(batch_size, n_actions)
-            rewards_all_actions = torch.zeros(batch_size, n_actions, 1, device=args.device)
 
             # for each action in n_actions, we will generate the next_state
             for action in range(n_actions):
@@ -139,11 +136,16 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
                 
                 # define next state, reward
                 next_states[l, action, :] = torch.from_numpy(cube.representation()).float()
-                rewards_all_actions[l, action] = 1 if cube.solved() else -1
+                # rewards_all_actions[l, action] = 1 if cube.solved() else -1
+
+                if cube.solved():
+                    rewards_all_actions[l, action] = 1.0
 
                 # set state back to parent state
                 cube.set_state(cur_state)
 
+        print('{0:.10f}'.format(torch.mean(rewards_all_actions).item()))
+        # print(1 in rewards_all_actions)
         # forward pass
         with torch.no_grad():
             p_out, v_out = model(next_states)
