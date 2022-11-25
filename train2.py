@@ -7,7 +7,7 @@ import os
 import time
 from rubikscube import Cube
 
-from utils import SaveBestPolicyModel, SaveBestValueModel
+from utils import SaveBestModel
 
 parser = argparse.ArgumentParser()
 
@@ -56,9 +56,8 @@ def generate_scrambled_states(args, cube):
     for _ in range(args.nsequences):
         # define state, current_state is stored in env instance
         for d in range(args.nscrambles):
-            cube.scramble(1)
+            cube.scramble(d)
             cur_state = cube.get_state() # parent state for this iteration
-            # scrambled_states[idx, :] = torch.from_numpy(cube.representation()).float()
             scrambled_states.append(cur_state)
             weights.append(1/(d + 1))
 
@@ -99,21 +98,16 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
     # initialize weights using Glorot/Xavier initialization
     if args.resume_path:
-        # resume_state = torch.load(args.resume_path, map_location=args.device)
-        # model.load_state_dict(resume_state['state_dict'])
-        # # optimizer.load_state_dict(resume_state['optimizer'])
-        # losses_ce = resume_state['ce_losses']
-        # losses_mse = resume_state['mse_losses']
-        # startEpoch = resume_state['epoch'] + 1
-        # # instantiate saveBestModels with best loss being min of previous losses
-        # saveBestPolicyModel = SaveBestPolicyModel(np.min(losses_ce))
-        # saveBestValModel = SaveBestValueModel(np.min(losses_mse))
-        model.load_state_dict(torch.load(args.resume_path))
-        losses_ce = []
-        losses_mse = []
-        idx1 = args.resume_path.index("checkpoint_")
-        idx2 = args.resume_path.index(".pt")
-        startEpoch = int(args.resume_path[idx1+11:idx2])
+        resume_state = torch.load(args.resume_path, map_location=args.device)
+        model.load_state_dict(resume_state['state_dict'])
+        model_target.load_state_dict(resume_state['target_state_dict'])
+        optimizer.load_state_dict(resume_state['optimizer'])
+        losses_ce = resume_state['ce_losses']
+        losses_mse = resume_state['mse_losses']
+        startEpoch = resume_state['epoch'] + 1
+        # instantiate saveBestModels with best loss being min of previous losses
+        best_loss = np.min(np.array(losses_ce) + np.array(losses_mse))
+        saveBestModel = SaveBestModel(best_loss)
     else:
         init_weights(model)
         init_weights(model_target)
@@ -121,8 +115,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         losses_mse = []
         startEpoch = 0
         # instantiate saveBestModels
-        # saveBestPolicyModel = SaveBestPolicyModel()
-        # saveBestValModel = SaveBestValueModel()
+        saveBestModel = SaveBestModel()
 
     model_target = model_target.to(args.device)
     model = model.to(args.device)
@@ -163,17 +156,19 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         print('{0:.10f}'.format(torch.mean(rewards_all_actions).item()))
         # forward pass
         with torch.no_grad():
-            p_out, v_out = model_target(next_states)
+            p_out, v_out = model_target(next_states) # next_states shape is (batchsize, n_actions, 480)
 
             # print("Probs mean: ", p_out.mean(dim=0))
             print("Val mean: ", v_out.mean(dim=0))
 
             # set labels to be maximal value from each children state
             v_label, idx = torch.max(rewards_all_actions + v_out, dim=1)
-            idx = idx.repeat(1,n_actions)
-            idx = idx.unsqueeze(1) # shape is (batch_size, 1, n_actions)
-            p_label = torch.gather(p_out, dim=1, index=idx)
-            p_label = p_label.squeeze(1)
+            # idx = idx.repeat(1,n_actions)
+            # idx = idx.unsqueeze(1) # shape is (batch_size, 1, n_actions)
+            # p_label = torch.gather(p_out, dim=1, index=idx)
+            # p_label = p_label.squeeze(1)
+
+            p_label = p_out[torch.range(0, batch_size).long(), idx,:]
 
         # training
         input_states = generate_input_states(cube, scrambled_states)
@@ -192,8 +187,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
 
         optimizer.step()
 
-        losses_ce.append(loss_prob.mean().data.item())
-        losses_mse.append(loss_val.mean().data.item())
+        losses_ce.append(loss_prob.mean().item())
+        losses_mse.append(loss_val.mean().item())
 
         print('Epoch: [{0}]\t'
                 'CE Loss {1:.8f}\t'
@@ -206,17 +201,12 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         soft_update(model, model_target, tau=args.tau)
 
         # save best models
-        # saveBestPolicyModel(args, losses_ce[-1], epoch, model, optimizer, losses_ce, losses_mse)
-        # saveBestValModel(args, losses_mse[-1], epoch, model, optimizer, losses_ce, losses_mse)
+        saveBestModel(args, losses_ce[-1] + losses_mse[-1], epoch, model, model_target, optimizer, losses_ce, losses_mse)
 
-        # # save this epoch's model and delete previous epoch's model
-        # state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict(),
-        #              'ce_losses': losses_ce, 'mse_losses': losses_mse, 'epoch': epoch}
-        # torch.save(state, os.path.join(args.save_path, 'checkpoint_' + str(epoch+1) + '.pt'))
-        # if os.path.exists(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt')):
-        #     os.remove(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt'))
-
-        torch.save(model.state_dict(), os.path.join(args.save_path, 'checkpoint_' + str(epoch+1) + '.pt'))
+        # save this epoch's model and delete previous epoch's model
+        state = {'state_dict': model.state_dict(), 'target_state_dict': model_target.state_dict(),
+                 'optimizer': optimizer.state_dict(), 'ce_losses': losses_ce, 'mse_losses': losses_mse, 'epoch': epoch}
+        torch.save(state, os.path.join(args.save_path, 'checkpoint_' + str(epoch+1) + '.pt'))
         if os.path.exists(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt')):
             os.remove(os.path.join(args.save_path, 'checkpoint_' + str(epoch) + '.pt'))
 
@@ -245,5 +235,3 @@ if __name__ == "__main__":
     print('ADI started')
     model = adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer)
     print('ADI done')
-
-    # run the MCTS tree search here
