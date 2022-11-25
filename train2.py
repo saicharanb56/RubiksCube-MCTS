@@ -97,10 +97,6 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
     assert n_actions == 12 or n_actions == 18
     assert cube.solved()
 
-    # instantiate saveBestModels
-    saveBestPolicyModel = SaveBestPolicyModel()
-    saveBestValModel = SaveBestValueModel()
-
     # initialize weights using Glorot/Xavier initialization
     if args.resume_path:
         resume_state = torch.load(args.resume_path, map_location=args.device)
@@ -109,12 +105,18 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         losses_ce = resume_state['ce_losses']
         losses_mse = resume_state['mse_losses']
         startEpoch = resume_state['epoch'] + 1
+        # instantiate saveBestModels with best loss being min of previous losses
+        saveBestPolicyModel = SaveBestPolicyModel(np.min(losses_ce))
+        saveBestValModel = SaveBestValueModel(np.min(losses_mse))
     else:
         init_weights(model)
         init_weights(model_target)
         losses_ce = []
         losses_mse = []
         startEpoch = 0
+        # instantiate saveBestModels
+        saveBestPolicyModel = SaveBestPolicyModel()
+        saveBestValModel = SaveBestValueModel()
 
     for epoch in range(startEpoch, args.nepochs):
         tic = time.time()
