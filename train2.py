@@ -119,6 +119,9 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         saveBestPolicyModel = SaveBestPolicyModel()
         saveBestValModel = SaveBestValueModel()
 
+    model_target = model_target.to(args.device)
+    model = model.to(args.device)
+
     for epoch in range(startEpoch, args.nepochs):
         tic = time.time()
 
@@ -218,10 +221,10 @@ if __name__ == "__main__":
 
     # Instantiate model, optimizer, loss functions
     model = NNet()
-    model = model.to(device)
+    # model = model.to(device)
 
     model_target = NNet()
-    model_target = model_target.to(device)
+    # model_target = model_target.to(device)
 
     optimizer = optim.RMSprop(model.parameters(), lr=args.lr, weight_decay=args.wd, momentum=args.momentum)
     lossfn_val = nn.MSELoss(reduction='none')
