@@ -124,6 +124,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         # generate N = K*L scrambled states
         scrambled_states, weights = generate_scrambled_states(args, cube)
         weights = torch.tensor(weights, device=args.device)
+        # weights = weights/torch.sum(weights)
         
         next_states = torch.empty((batch_size, n_actions, 480), device=args.device)
         rewards_all_actions = torch.full((batch_size, n_actions, 1), fill_value = -1.0, device=args.device)
