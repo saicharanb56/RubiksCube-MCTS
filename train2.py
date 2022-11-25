@@ -101,7 +101,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
     if args.resume_path:
         resume_state = torch.load(args.resume_path, map_location=args.device)
         model.load_state_dict(resume_state['state_dict'])
-        optimizer.load_state_dict(resume_state['optimizer'])
+        # optimizer.load_state_dict(resume_state['optimizer'])
         losses_ce = resume_state['ce_losses']
         losses_mse = resume_state['mse_losses']
         startEpoch = resume_state['epoch'] + 1
@@ -109,7 +109,6 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         saveBestPolicyModel = SaveBestPolicyModel(np.min(losses_ce))
         saveBestValModel = SaveBestValueModel(np.min(losses_mse))
     else:
-        print("This")
         init_weights(model)
         init_weights(model_target)
         losses_ce = []
