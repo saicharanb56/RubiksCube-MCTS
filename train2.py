@@ -45,24 +45,27 @@ def soft_update(local_model, target_model, tau):
 def generate_scrambled_states(args, cube):
     '''
     Generate and return N = K*L scrambled states as tuples
+    Generate weights = 1 / D(xi) where D(xi) is the number of scrambles
     '''
     if not cube.solved():
         cube = Cube.cube_qtm()
 
     scrambled_states = []
+    weights = []
     # generate list of scrambled_states
     for _ in range(args.nsequences):
         # define state, current_state is stored in env instance
-        for _ in range(args.nscrambles):
+        for d in range(args.nscrambles):
             cube.scramble(1)
             cur_state = cube.get_state() # parent state for this iteration
             # scrambled_states[idx, :] = torch.from_numpy(cube.representation()).float()
             scrambled_states.append(cur_state)
+            weights.append(1/(d + 1))
 
         # set cube back to solved state
         cube = Cube.cube_qtm()
 
-    return scrambled_states
+    return scrambled_states, weights
 
 def generate_input_states(cube, scrambled_states):
     '''
@@ -119,7 +122,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         batch_size = args.nscrambles*args.nsequences
 
         # generate N = K*L scrambled states
-        scrambled_states = generate_scrambled_states(args, cube)
+        scrambled_states, weights = generate_scrambled_states(args, cube)
+        weights = torch.tensor(weights, device=args.device)
         
         next_states = torch.empty((batch_size, n_actions, 480), device=args.device)
         rewards_all_actions = torch.full((batch_size, n_actions, 1), fill_value = -1.0, device=args.device)
@@ -167,10 +171,11 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         
         probs_pred, val_pred = model_target(input_states)
 
-        loss_prob = lossfn_prob(probs_pred, p_label)
-        loss_val = lossfn_val(val_pred, v_label)
+        # calculate sample weighted losses
+        loss_prob = lossfn_prob(probs_pred, p_label) * weights
+        loss_val = lossfn_val(val_pred, v_label) * weights
 
-        loss = loss_prob + loss_val
+        loss = loss_prob.mean() + loss_val.mean()
         loss.backward()
 
         optimizer.step()
@@ -215,8 +220,8 @@ if __name__ == "__main__":
     model_target = model_target.to(device)
 
     optimizer = optim.RMSprop(model.parameters(), lr=args.lr, weight_decay=args.wd, momentum=args.momentum)
-    lossfn_val = nn.MSELoss()
-    lossfn_prob = nn.CrossEntropyLoss()
+    lossfn_val = nn.MSELoss(reduction='none')
+    lossfn_prob = nn.CrossEntropyLoss(reduction='none')
 
     #Instantiate env
     cube = Cube.cube_qtm()
