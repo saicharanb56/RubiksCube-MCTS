@@ -12,10 +12,10 @@ from utils import SaveBestPolicyModel, SaveBestValueModel
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--batch_size', default=10000, type=int)
-parser.add_argument('--lr', default=1e-3, type=float)
+parser.add_argument('--lr', default=5e-4, type=float)
 parser.add_argument('--nepochs', default=200, type=int, help='Number of ADI epochs (M)')
 parser.add_argument('--nscrambles', default=25, type=int, help='Number of scrambles of cube (k)')
-parser.add_argument('--nsequences', default=1000, type=int, help='Number of sequences of scrambles (l)')
+parser.add_argument('--nsequences', default=500, type=int, help='Number of sequences of scrambles (l)')
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
