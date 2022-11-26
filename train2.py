@@ -39,7 +39,7 @@ parser.add_argument('--resume_path',
                     type=str,
                     help="Path of model dict to resume from")
 parser.add_argument('--save_path',
-                    default="/home/saicharanb56/RubiksCube-MCTS/results/",
+                    default="results/",
                     type=str,
                     help="Folder in which results are stored")
 
@@ -205,7 +205,7 @@ def adi(args,
             # p_label = torch.gather(p_out, dim=1, index=idx)
             # p_label = p_label.squeeze(1)
 
-            p_label = p_out[torch.arange(0, batch_size), idx, :]
+            p_label = p_out[torch.arange(0, batch_size), idx.flatten(), :]
 
         # training
         input_states = generate_input_states(cube, scrambled_states)
