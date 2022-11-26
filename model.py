@@ -28,7 +28,7 @@ class NNet(nn.Module):
         x = self.elu(self.fc2(x))
 
         probs = self.elu(self.fc3a(x))
-        probs = self.elu(self.prob_out(probs))
+        probs = self.prob_out(probs)
         probs = self.softmax(probs)
 
         val = self.elu(self.fc3b(x))
