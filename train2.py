@@ -19,7 +19,7 @@ parser.add_argument('--nsequences', default=500, type=int, help='Number of seque
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
-parser.add_argument('--tau', default=0.01, type=float, help="Interpolation parameter in soft update")
+parser.add_argument('--tau', default=0.99, type=float, help="Interpolation parameter in soft update")
 parser.add_argument('--device', default="cuda", type=str)
 
 parser.add_argument('--resume_path', default=None, type=str, help="Path of model dict to resume from")
@@ -96,6 +96,9 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
     assert n_actions == 12 or n_actions == 18
     assert cube.solved()
 
+    model = model.to(args.device)
+    model_target = model_target.to(args.device)
+    
     # initialize weights using Glorot/Xavier initialization
     if args.resume_path:
         resume_state = torch.load(args.resume_path, map_location=args.device)
@@ -117,8 +120,8 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         # instantiate saveBestModels
         saveBestModel = SaveBestModel()
 
-    model_target = model_target.to(args.device)
-    model = model.to(args.device)
+    # model_target = model_target.to(args.device)
+    # model = model.to(args.device)
 
     for epoch in range(startEpoch, args.nepochs):
         tic = time.time()
