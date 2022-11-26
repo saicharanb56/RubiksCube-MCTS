@@ -1,4 +1,4 @@
 [submodule "rcube"]
 	path = rcube
-	url = https://github.com/h4rr9/rcube.git
+	url = https://github.com/h4rr9/rcube
 	branch = main
