@@ -167,7 +167,7 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
             # p_label = torch.gather(p_out, dim=1, index=idx)
             # p_label = p_label.squeeze(1)
 
-            p_label = p_out[list(range(0, batch_size)), idx,:]
+            p_label = p_out[torch.arange(0, batch_size)), idx,:]
 
         # training
         input_states = generate_input_states(cube, scrambled_states)
