@@ -199,16 +199,7 @@ def adi(args,
 
             # set labels to be maximal value from each children state
             v_label, idx = torch.max(rewards_all_actions + v_out, dim=1)
-<<<<<<< HEAD
-            idx = idx.repeat(1,n_actions)
-            idx = idx.unsqueeze(1) # shape is (batch_size, 1, n_actions)
-            p_label = torch.gather(p_out, dim=1, index=idx)
-            p_label = p_label.squeeze(1)
-
-            # p_label = p_out[list(range(0, batch_size)), idx,:]
-=======
             p_label = idx.squeeze(dim=1)
->>>>>>> 0ea41a7f4a8e444492e6930c7f5edd7d39956e19
 
         # training
         input_states = generate_input_states(cube, scrambled_states)

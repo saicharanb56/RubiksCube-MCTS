@@ -28,15 +28,9 @@ class NNet(nn.Module):
         x = self.elu(self.fc1(x))
         x = self.elu(self.fc2(x))
 
-<<<<<<< HEAD
-        probs = self.elu(self.fc3a(x))
-        probs = self.prob_out(probs)
-        probs = self.softmax(probs)
-=======
         return x
 
     def _values(self, x):
->>>>>>> 0ea41a7f4a8e444492e6930c7f5edd7d39956e19
 
         val = self.elu(self.fc3b(x))
         val = self.val_out(val)
