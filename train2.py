@@ -7,7 +7,7 @@ import os
 import time
 from rubikscube import Cube
 
-from utils import SaveBestModel
+from utils import SaveBestModel, validate
 
 parser = argparse.ArgumentParser()
 
@@ -86,7 +86,7 @@ def generate_scrambled_states(args):
             # set cube back to solved state
             cube = Cube.cube_qtm()
 
-    return scrambled_states, weights
+    return scrambled_states, weights    
 
 
 def generate_input_states(cube, scrambled_states):
@@ -229,6 +229,11 @@ def adi(args,
                                                        time.time() - tic))
 
         soft_update(model, model_target, tau=args.tau)
+
+        # validation
+        if epoch % 10 == 0:
+            score = validate(args, model, n_actions)
+            print("Score of model = {0:3f} ".format(score))
 
         # save best models
         saveBestModel(args, losses_ce[-1] + losses_mse[-1], epoch, model,
