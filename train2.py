@@ -42,6 +42,7 @@ parser.add_argument('--save_path',
                     default="results/",
                     type=str,
                     help="Folder in which results are stored")
+parser.add_argument('--vfreq', type=int, help="Frequency of validation step (per epoch)")
 
 
 def init_weights(m):
