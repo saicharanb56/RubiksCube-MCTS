@@ -64,13 +64,13 @@ def soft_update(local_model, target_model, tau):
                                 (1 - tau) * target_param.data)
 
 
-def generate_scrambled_states(args, cube):
+def generate_scrambled_states(args):
     '''
     Generate and return N = K*L scrambled states as tuples
     Generate weights = 1 / D(xi) where D(xi) is the number of scrambles
     '''
-    if not cube.solved():
-        cube = Cube.cube_qtm()
+
+    cube = Cube.cube_qtm()
 
     scrambled_states = []
     weights = []
@@ -83,8 +83,8 @@ def generate_scrambled_states(args, cube):
             scrambled_states.append(cur_state)
             weights.append(1 / (d + 1))
 
-        # set cube back to solved state
-        cube = Cube.cube_qtm()
+            # set cube back to solved state
+            cube = Cube.cube_qtm()
 
     return scrambled_states, weights
 
@@ -158,7 +158,7 @@ def adi(args,
         batch_size = args.nscrambles * args.nsequences
 
         # generate N = K*L scrambled states
-        scrambled_states, weights = generate_scrambled_states(args, cube)
+        scrambled_states, weights = generate_scrambled_states(args)
         weights = torch.tensor(weights, device=args.device)
         # weights = weights/torch.sum(weights)
 
@@ -168,9 +168,9 @@ def adi(args,
                                          fill_value=-1.0,
                                          device=args.device)
 
-        for l in range(batch_size):
+        for batch in range(batch_size):
             # set state
-            cur_state = scrambled_states[l]
+            cur_state = scrambled_states[batch]
             cube.set_state(cur_state)
 
             # for each action in n_actions, we will generate the next_state
@@ -179,11 +179,11 @@ def adi(args,
                 cube.turn(action)
 
                 # define next state, reward
-                next_states[l, action, :] = torch.from_numpy(
+                next_states[batch, action, :] = torch.from_numpy(
                     cube.representation()).float()
 
                 if cube.solved():
-                    rewards_all_actions[l, action] = 1.0
+                    rewards_all_actions[batch, action] = 1.0
 
                 # set state back to parent state
                 cube.set_state(cur_state)
