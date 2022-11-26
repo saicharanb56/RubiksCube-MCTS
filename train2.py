@@ -195,7 +195,6 @@ def adi(args,
                 next_states
             )  # next_states shape is (batchsize, n_actions, 480)
 
-            # print("Probs mean: ", p_out.mean(dim=0))
             print("Val mean: ", v_out.mean(dim=0))
 
             # set labels to be maximal value from each children state
