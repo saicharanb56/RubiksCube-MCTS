@@ -13,9 +13,9 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--batch_size', default=10000, type=int)
 parser.add_argument('--lr', default=5e-4, type=float)
-parser.add_argument('--nepochs', default=200, type=int, help='Number of ADI epochs (M)')
-parser.add_argument('--nscrambles', default=25, type=int, help='Number of scrambles of cube (k)')
-parser.add_argument('--nsequences', default=500, type=int, help='Number of sequences of scrambles (l)')
+parser.add_argument('--nepochs', default=5000, type=int, help='Number of ADI epochs (M)')
+parser.add_argument('--nscrambles', default=30, type=int, help='Number of scrambles of cube (k)')
+parser.add_argument('--nsequences', default=100, type=int, help='Number of sequences of scrambles (l)')
 parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
@@ -120,9 +120,6 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
         # instantiate saveBestModels
         saveBestModel = SaveBestModel()
 
-    # model_target = model_target.to(args.device)
-    # model = model.to(args.device)
-
     for epoch in range(startEpoch, args.nepochs):
         tic = time.time()
 
@@ -148,7 +145,6 @@ def adi(args, model, model_target, cube, lossfn_prob, lossfn_val, optimizer, n_a
                 
                 # define next state, reward
                 next_states[l, action, :] = torch.from_numpy(cube.representation()).float()
-                # rewards_all_actions[l, action] = 1 if cube.solved() else -1
 
                 if cube.solved():
                     rewards_all_actions[l, action] = 1.0
@@ -223,10 +219,7 @@ if __name__ == "__main__":
 
     # Instantiate model, optimizer, loss functions
     model = NNet()
-    # model = model.to(device)
-
     model_target = NNet()
-    # model_target = model_target.to(device)
 
     optimizer = optim.RMSprop(model.parameters(), lr=args.lr, weight_decay=args.wd, momentum=args.momentum)
     lossfn_val = nn.MSELoss(reduction='none')
