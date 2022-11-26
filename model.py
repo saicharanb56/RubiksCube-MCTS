@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-class NNet(nn.Module):
 
+class NNet(nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
@@ -13,7 +13,7 @@ class NNet(nn.Module):
         # define fc layers for probability outputs
         self.fc3a = nn.Linear(2048, 512)
         self.prob_out = nn.Linear(512, 12)
-        self.softmax = nn.Softmax(dim = -1)
+        self.softmax = nn.Softmax(dim=-1)
 
         # define fc layers for value output
         self.fc3b = nn.Linear(2048, 512)
@@ -28,7 +28,7 @@ class NNet(nn.Module):
         x = self.elu(self.fc2(x))
 
         probs = self.elu(self.fc3a(x))
-        probs = self.elu(self.prob_out(probs))
+        probs = self.prob_out(probs)
         probs = self.softmax(probs)
 
         val = self.elu(self.fc3b(x))
