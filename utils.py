@@ -89,6 +89,7 @@ def validate(args, model, n_actions, ncubes_per_depth=10, nscrambles=30, max_nmo
         with torch.no_grad():
             v_out = model.values(child_states)
             optimal_actions = torch.argmax(rewards + v_out, dim=1)
+            optimal_actions = optimal_actions.squeeze(-1)
             optimal_actions = optimal_actions.cpu().numpy()
 
         # make actions and generate new states
