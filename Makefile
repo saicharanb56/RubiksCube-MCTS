@@ -1,16 +1,8 @@
 clean:
-	cargo clean
 	rm -rf *~ dist *.egg-info build target
 
 build-pyo3:
-	maturin build -i python3 --release --cargo-extra-args="--features python"
+	maturin build -i python3 --features python -m rcube/Cargo.toml
 
 develop-pyo3:
-	maturin develop --release --cargo-extra-args="--features python"
-
-test:
-	cargo test 
-	nose2 -vv -t ./train -s ./train --log-capture
-
-bench:
-	cargo bench
+	maturin develop --release --features python -m rcube/Cargo.toml
