@@ -97,8 +97,8 @@ def generate_input_states(cube, scrambled_states):
     '''
     input_states = torch.empty((len(scrambled_states), 480))
 
-    for i in range(len(scrambled_states)):
-        cube.set_state(scrambled_states[i])
+    for i, state in enumerate(scrambled_states):
+        cube.set_state(state)
         input_states[i, :] = torch.tensor(cube.representation(),
                                           dtype=torch.float32)
 
@@ -191,7 +191,7 @@ def adi(args,
         print('{0:.10f}'.format(torch.mean(rewards_all_actions).item()))
         # forward pass
         with torch.no_grad():
-            p_out, v_out = model_target(
+            v_out = model_target.values(
                 next_states
             )  # next_states shape is (batchsize, n_actions, 480)
 
@@ -200,12 +200,7 @@ def adi(args,
 
             # set labels to be maximal value from each children state
             v_label, idx = torch.max(rewards_all_actions + v_out, dim=1)
-            # idx = idx.repeat(1,n_actions)
-            # idx = idx.unsqueeze(1) # shape is (batch_size, 1, n_actions)
-            # p_label = torch.gather(p_out, dim=1, index=idx)
-            # p_label = p_label.squeeze(1)
-
-            p_label = p_out[torch.arange(0, batch_size), idx.flatten(), :]
+            p_label = idx.squeeze(dim=1)
 
         # training
         input_states = generate_input_states(cube, scrambled_states)
