@@ -42,9 +42,14 @@ parser.add_argument('--save_path',
                     default="results/",
                     type=str,
                     help="Folder in which results are stored")
-parser.add_argument('--vfreq', default=10, type=int, 
+parser.add_argument('--vfreq',
+                    default=10,
+                    type=int,
                     help="Frequency of validation step (per n epochs)")
-parser.add_argument('--update_freq', default=3, type=int, help="Frequency of soft update")
+parser.add_argument('--update_freq',
+                    default=3,
+                    type=int,
+                    help="Frequency of soft update")
 
 
 def init_weights(m):
@@ -52,7 +57,7 @@ def init_weights(m):
         torch.nn.init.xavier_uniform(m.weight)
 
 
-def soft_update(local_model, target_model, tau):
+def soft_update(local_model, target_model, tau=1.0):
     """Soft update model parameters.
         θ_target = τ*θ_local + (1 - τ)*θ_target
         Params
@@ -80,14 +85,14 @@ def generate_scrambled_states(args):
     # generate list of scrambled_states
     for _ in range(args.nsequences):
         # define state, current_state is stored in env instance
-        for d in range(1, 1 + args.nscrambles):
-            cube.scramble(d)
+        for d in range(args.nscrambles):
+            cube.scramble(1)
             cur_state = cube.get_state()  # parent state for this iteration
             scrambled_states.append(cur_state)
             weights.append(1 / d)
 
-            # set cube back to solved state
-            cube = Cube.cube_qtm()
+        # set cube back to solved state
+        cube = Cube.cube_qtm()
 
     return scrambled_states, weights
 
