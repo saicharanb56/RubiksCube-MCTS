@@ -86,13 +86,13 @@ def generate_scrambled_states(args):
     for _ in range(args.nsequences):
         # define state, current_state is stored in env instance
         for d in range(args.nscrambles):
-            cube.scramble(1)
+            cube.scramble(d + 1)
             cur_state = cube.get_state()  # parent state for this iteration
             scrambled_states.append(cur_state)
-            weights.append(1 / d)
+            weights.append(1 / (d + 1))
 
-        # set cube back to solved state
-        cube = Cube.cube_qtm()
+            # set cube back to solved state
+            cube = Cube.cube_qtm()
 
     return scrambled_states, weights
 
@@ -241,7 +241,11 @@ def adi(args,
         # validation
         if (epoch + 1) % args.vfreq == 0:
             score = validate(args, model)
-            print("Score of model = ", score)
+            print("Validation scores")
+            print("\n".join([
+                f"scramble depth {i+1} ::: {x:.3%}"
+                for (i, x) in enumerate(score)
+            ]))
 
         # save best models
         saveBestModel(args, losses_ce[-1] + losses_mse[-1], epoch, model,
