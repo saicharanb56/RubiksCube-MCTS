@@ -30,6 +30,21 @@ class SaveBestModel:
                      'optimizer': optimizer.state_dict(), 'ce_losses': ce_losses, 'mse_losses': mse_losses, 'epoch': epoch}   
             torch.save(state, os.path.join(args.save_path, 'best_policy_checkpoint_' + str(epoch+1) + '.pt'))
 
+def generate_input_states(cube, scrambled_states):
+    '''
+    Generate input states to network
+    Input is of shape (batch_size,) tuples
+    Output should be of shape (batch_size, 480) float
+    '''
+    input_states = torch.empty((len(scrambled_states), 480))
+
+    for i, state in enumerate(scrambled_states):
+        cube.set_state(state)
+        input_states[i, :] = torch.tensor(cube.representation(),
+                                          dtype=torch.float32)
+
+    return input_states
+
 
 def generate_child_states(args, cube, n_actions, states):
     # generate child states
@@ -84,11 +99,15 @@ def validate(args, model, n_actions, ncubes_per_depth=10, nscrambles=30, max_nmo
     # identify optimal action for each state
     for _ in range(max_nmoves):
         
-        child_states, rewards = generate_child_states(args, cube, n_actions, states) # shape is (batch_size, n_actions, 480)
+        # child_states, rewards = generate_child_states(args, cube, n_actions, states) # shape is (batch_size, n_actions, 480)
+
+        input_states = generate_input_states(cube, states)
 
         with torch.no_grad():
-            v_out = model.values(child_states)
-            optimal_actions = torch.argmax(rewards + v_out, dim=1)
+            # v_out = model.values(child_states)
+            # optimal_actions = torch.argmax(rewards + v_out, dim=1)
+            
+            optimal_actions = torch.argmax(model.probs(input_states), dim=1)
             optimal_actions = optimal_actions.squeeze(-1)
             optimal_actions = optimal_actions.cpu().numpy()
 
