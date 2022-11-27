@@ -85,7 +85,7 @@ def validate(args, model, ncubes_per_depth=10, nscrambles=30, max_nmoves=50):
     # generate ncubes_per_depth states for each depth level
     for l in range(ncubes_per_depth):
         for k in range(nscrambles):
-            cube.scramble(k)
+            cube.scramble(k + 1)
             cur_state = cube.get_state()  # parent state for this iteration
             states.append(cur_state)
 

@@ -79,7 +79,7 @@ def generate_scrambled_states(args):
     for _ in range(args.nsequences):
         # define state, current_state is stored in env instance
         for d in range(args.nscrambles):
-            cube.scramble(d)
+            cube.scramble(d + 1)
             cur_state = cube.get_state()  # parent state for this iteration
             scrambled_states.append(cur_state)
             weights.append(1 / (d + 1))
@@ -189,7 +189,6 @@ def adi(args,
                 # set state back to parent state
                 cube.set_state(cur_state)
 
-        print('{0:.10f}'.format(torch.mean(rewards_all_actions).item()))
         # forward pass
         with torch.no_grad():
             v_out = model_target.values(
