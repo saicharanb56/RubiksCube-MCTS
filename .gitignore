@@ -4,6 +4,7 @@ Cargo.lock
 *.pln
 *.onnx
 *.graph
+*.pt
 
 **/__pycache__
 results/

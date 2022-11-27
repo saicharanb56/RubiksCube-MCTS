@@ -37,28 +37,27 @@ class NNet(nn.Module):
 
         return val
 
-    def _probs(self, x):
+    def _logits(self, x):
 
-        probs = self.elu(self.fc3a(x))
-        probs = self.prob_out(probs)
-        probs = self.softmax(probs)
+        logits = self.elu(self.fc3a(x))
+        logits = self.prob_out(logits)
 
-        return probs
+        return logits
 
     def values(self, x):
 
         val = self._values(self._backbone(x))
         return val
 
-    def prob(self, x):
+    def logits(self, x):
 
-        probs = self._probs(self._backbone(x))
-        return probs
+        logits = self._logits(self._backbone(x))
+        return logits
 
     def forward(self, x):
 
         x = self._backbone(x)
-        probs = self._probs(x)
+        logtits = self._logits(x)
         val = self._values(x)
 
-        return probs, val
+        return logtits, val

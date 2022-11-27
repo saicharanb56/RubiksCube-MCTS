@@ -42,7 +42,9 @@ parser.add_argument('--save_path',
                     default="results/",
                     type=str,
                     help="Folder in which results are stored")
-parser.add_argument('--vfreq', type=int, help="Frequency of validation step (per n epochs)")
+parser.add_argument('--vfreq',
+                    type=int,
+                    help="Frequency of validation step (per n epochs)")
 
 
 def init_weights(m):
@@ -78,8 +80,13 @@ def generate_scrambled_states(args):
     # generate list of scrambled_states
     for _ in range(args.nsequences):
         # define state, current_state is stored in env instance
+<<<<<<< HEAD
         for d in range(args.nscrambles):
             cube.scramble(d + 1)
+=======
+        for d in range(1, 1 + args.nscrambles):
+            cube.scramble(d)
+>>>>>>> ad45fbf8b93dc5ab74feedbaa58189526b718586
             cur_state = cube.get_state()  # parent state for this iteration
             scrambled_states.append(cur_state)
             weights.append(1 / (d + 1))
@@ -87,7 +94,7 @@ def generate_scrambled_states(args):
             # set cube back to solved state
             cube = Cube.cube_qtm()
 
-    return scrambled_states, weights    
+    return scrambled_states, weights
 
 
 def generate_input_states(cube, scrambled_states):
@@ -207,18 +214,18 @@ def adi(args,
 
         optimizer.zero_grad()
 
-        probs_pred, val_pred = model(input_states)
+        logits_pred, val_pred = model(input_states)
 
         # calculate sample weighted losses
-        loss_prob = lossfn_prob(probs_pred, p_label) * weights
+        loss_logits = lossfn_prob(logits_pred, p_label) * weights
         loss_val = lossfn_val(val_pred, v_label) * weights
 
-        loss = loss_prob.mean() + loss_val.mean()
+        loss = loss_logits.mean() + loss_val.mean()
         loss.backward()
 
         optimizer.step()
 
-        losses_ce.append(loss_prob.mean().item())
+        losses_ce.append(loss_logits.mean().item())
         losses_mse.append(loss_val.mean().item())
 
         print('Epoch: [{0}]\t'
