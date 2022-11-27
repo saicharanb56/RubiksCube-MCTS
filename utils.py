@@ -76,7 +76,7 @@ def generate_child_states(args, cube, n_actions, states):
     return child_states, rewards
 
 
-def validate(args, model, n_actions, ncubes_per_depth=10, nscrambles=30, max_nmoves=50):
+def validate(args, model, ncubes_per_depth=10, nscrambles=30, max_nmoves=50):
     '''
     Validate performance of model
     '''
@@ -102,7 +102,7 @@ def validate(args, model, n_actions, ncubes_per_depth=10, nscrambles=30, max_nmo
         # child_states, rewards = generate_child_states(args, cube, n_actions, states) # shape is (batch_size, n_actions, 480)
 
         input_states = generate_input_states(cube, states)
-
+        input_states = input_states.to(args.device)
         with torch.no_grad():
             # v_out = model.values(child_states)
             # optimal_actions = torch.argmax(rewards + v_out, dim=1)

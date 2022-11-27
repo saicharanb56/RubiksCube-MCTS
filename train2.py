@@ -42,7 +42,7 @@ parser.add_argument('--save_path',
                     default="results/",
                     type=str,
                     help="Folder in which results are stored")
-parser.add_argument('--vfreq', type=int, help="Frequency of validation step (per epoch)")
+parser.add_argument('--vfreq', type=int, help="Frequency of validation step (per n epochs)")
 
 
 def init_weights(m):
@@ -233,7 +233,7 @@ def adi(args,
 
         # validation
         if epoch % 10 == 0:
-            score = validate(args, model, n_actions)
+            score = validate(args, model)
             print("Score of model = {0:3f} ".format(score))
 
         # save best models
