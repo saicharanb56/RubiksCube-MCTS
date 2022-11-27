@@ -105,8 +105,8 @@ def validate(args, model, ncubes_per_depth=10, nscrambles=30, max_nmoves=50):
 
                 cube.turn(best_action)
 
-                if cube.solved():
-                    solved_count[k-1] += 1
+                if cube.solved():=
+                    solved_count[k - 1] += 1
                     break
 
     return solved_count / ncubes_per_depth
