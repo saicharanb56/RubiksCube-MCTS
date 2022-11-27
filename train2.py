@@ -29,7 +29,7 @@ parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
 parser.add_argument('--tau',
-                    default=0.05,
+                    default=0.95,
                     type=float,
                     help="Interpolation parameter in soft update")
 parser.add_argument('--device', default="cuda", type=str)
@@ -47,7 +47,7 @@ parser.add_argument('--vfreq',
                     type=int,
                     help="Frequency of validation step (per n epochs)")
 parser.add_argument('--update_freq',
-                    default=3,
+                    default=100,
                     type=int,
                     help="Frequency of soft update")
 
