@@ -1,6 +1,7 @@
+import os
+
 import numpy as np
 import torch
-import os
 from rubikscube import Cube
 
 
@@ -89,53 +90,23 @@ def validate(args, model, ncubes_per_depth=10, nscrambles=30, max_nmoves=50):
     '''
     Validate performance of model
     '''
-    cube = Cube.cube_qtm()
-    states = []
+    solved_count = np.zeros(nscrambles)
     # generate ncubes_per_depth states for each depth level
-    for l in range(ncubes_per_depth):
-        for k in range(nscrambles):
-            cube.scramble(k)
-            cur_state = cube.get_state()  # parent state for this iteration
-            states.append(cur_state)
+    for k in range(1, nscrambles + 1):
+        for _ in range(ncubes_per_depth):
+            cube = Cube.cube_qtm().scramble(k)
 
-            # set cube back to solved state
-            cube = Cube.cube_qtm()
+            for _ in range(max_nmoves):
+                repr = cube.representation()
+                repr_tensor = torch.tensor(repr,
+                                           dtype=torch.float32).to(args.device)
+                best_action = torch.argmax(model.logits(repr_tensor)).item()
 
-    # count number of times a state gets solved
-    solved_count = 0
-    total_count = len(states)
+                cube.turn(best_action)
 
-    # identify optimal action for each state
-    for _ in range(max_nmoves):
+                if cube.solved():
+                    solved_count[k] += 1
+                    break
 
-        # child_states, rewards = generate_child_states(args, cube, n_actions, states) # shape is (batch_size, n_actions, 480)
-
-        input_states = generate_input_states(cube, states)
-        input_states = input_states.to(args.device)
-        with torch.no_grad():
-            # v_out = model.values(child_states)
-            # optimal_actions = torch.argmax(rewards + v_out, dim=1)
-
-            optimal_actions = torch.argmax(model.logits(input_states), dim=1)
-            optimal_actions = optimal_actions.squeeze(-1)
-            optimal_actions = optimal_actions.cpu().numpy()
-
-        # make actions and generate new states
-        next_states = []
-        for i, action in enumerate(optimal_actions):
-            cube.set_state(states[i])
-            cube.turn(action)
-
-            if cube.solved():
-                solved_count += 1
-            else:
-                next_states.append(cube.get_state())
-
-        # if all states are solved
-        if len(next_states) == 0:
-            break
-
-        states = next_states
-
-    return solved_count / total_count
+    return solved_count / ncubes_per_depth
 

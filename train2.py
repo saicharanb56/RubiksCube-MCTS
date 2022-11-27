@@ -80,7 +80,7 @@ def generate_scrambled_states(args):
     # generate list of scrambled_states
     for _ in range(args.nsequences):
         # define state, current_state is stored in env instance
-        for d in range(args.nscrambles):
+        for d in range(1, 1 + args.nscrambles):
             cube.scramble(d)
             cur_state = cube.get_state()  # parent state for this iteration
             scrambled_states.append(cur_state)
