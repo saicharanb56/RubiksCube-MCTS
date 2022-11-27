@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', default=10000, type=int)
 parser.add_argument('--lr', default=5e-4, type=float)
 parser.add_argument('--nepochs',
-                    default=5000,
+                    default=50000,
                     type=int,
                     help='Number of ADI epochs (M)')
 parser.add_argument('--nscrambles',
@@ -29,7 +29,7 @@ parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
 parser.add_argument('--tau',
-                    default=0.99,
+                    default=0.05,
                     type=float,
                     help="Interpolation parameter in soft update")
 parser.add_argument('--device', default="cuda", type=str)
@@ -42,9 +42,9 @@ parser.add_argument('--save_path',
                     default="results/",
                     type=str,
                     help="Folder in which results are stored")
-parser.add_argument('--vfreq',
-                    type=int,
+parser.add_argument('--vfreq', default=10, type=int, 
                     help="Frequency of validation step (per n epochs)")
+parser.add_argument('--update_freq', default=3, type=int, help="Frequency of soft update")
 
 
 def init_weights(m):
@@ -148,7 +148,7 @@ def adi(args,
         saveBestModel = SaveBestModel(best_loss)
     else:
         init_weights(model)
-        init_weights(model_target)
+        soft_update(model, model_target, 1.0)
         losses_ce = []
         losses_mse = []
         startEpoch = 0
@@ -230,11 +230,11 @@ def adi(args,
                                                        losses_mse[-1],
                                                        time.time() - tic))
 
-        if (epoch + 1) % 5 == 0:
+        if (epoch + 1) % args.update_freq == 0:
             soft_update(model, model_target, tau=args.tau)
 
         # validation
-        if epoch % 10 == 0:
+        if (epoch + 1) % args.vfreq == 0:
             score = validate(args, model)
             print("Score of model = ", score)
 

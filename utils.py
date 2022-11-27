@@ -18,7 +18,7 @@ class SaveBestModel:
                  optimizer, ce_losses, mse_losses):
         if current_loss < self.best_loss:
             for file in os.listdir(args.save_path):
-                if file.startswith('best_policy'):
+                if file.startswith('best_'):
                     os.remove(os.path.join(args.save_path, file))
 
             self.best_loss = current_loss
@@ -36,7 +36,7 @@ class SaveBestModel:
                 state,
                 os.path.join(
                     args.save_path,
-                    'best_policy_checkpoint_' + str(epoch + 1) + '.pt'))
+                    'best_checkpoint_' + str(epoch + 1) + '.pt'))
 
 
 def generate_input_states(cube, scrambled_states):
