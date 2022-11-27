@@ -94,7 +94,8 @@ def validate(args, model, ncubes_per_depth=10, nscrambles=30, max_nmoves=50):
     # generate ncubes_per_depth states for each depth level
     for k in range(1, nscrambles + 1):
         for _ in range(ncubes_per_depth):
-            cube = Cube.cube_qtm().scramble(k)
+            cube = Cube.cube_qtm()
+            cube.scramble(k)
 
             for _ in range(max_nmoves):
                 repr = cube.representation()
@@ -109,4 +110,3 @@ def validate(args, model, ncubes_per_depth=10, nscrambles=30, max_nmoves=50):
                     break
 
     return solved_count / ncubes_per_depth
-
