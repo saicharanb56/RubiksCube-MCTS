@@ -18,7 +18,7 @@ parser.add_argument('--nepochs',
                     type=int,
                     help='Number of ADI epochs (M)')
 parser.add_argument('--nscrambles',
-                    default=30,
+                    default=50,
                     type=int,
                     help='Number of scrambles of cube (k)')
 parser.add_argument('--nsequences',
