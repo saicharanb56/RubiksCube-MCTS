@@ -205,7 +205,9 @@ def adi(args,
             print("Val mean: ", v_out.mean(dim=0))
 
             # set labels to be maximal value from each children state
-            v_label, idx = torch.max(rewards_all_actions + v_out, dim=1)
+            v_label, idx = torch.max(rewards_all_actions + v_out *
+                                     (rewards_all_actions < 0).float(),
+                                     dim=1)
             p_label = idx.squeeze(dim=1)
 
         # training
@@ -270,7 +272,7 @@ def adi(args,
             if (epoch + 1) % 1000 != 0:
                 os.remove(
                     os.path.join(args.save_path,
-                                'checkpoint_' + str(epoch) + '.pt'))
+                                 'checkpoint_' + str(epoch) + '.pt'))
 
     return model
 
