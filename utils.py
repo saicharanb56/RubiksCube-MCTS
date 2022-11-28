@@ -34,9 +34,8 @@ class SaveBestModel:
             }
             torch.save(
                 state,
-                os.path.join(
-                    args.save_path,
-                    'best_checkpoint_' + str(epoch + 1) + '.pt'))
+                os.path.join(args.save_path,
+                             'best_checkpoint_' + str(epoch + 1) + '.pt'))
 
 
 def generate_input_states(cube, scrambled_states):
@@ -86,13 +85,13 @@ def generate_child_states(args, cube, n_actions, states):
     return child_states, rewards
 
 
-def validate(args, model, ncubes_per_depth=100, nscrambles=30, max_nmoves=50):
+def validate(args, model, ncubes_per_depth=100, max_nmoves=50):
     '''
     Validate performance of model
     '''
-    solved_count = np.zeros(nscrambles)
+    solved_count = np.zeros(args.val_scrambles)
     # generate ncubes_per_depth states for each depth level
-    for k in range(1, nscrambles + 1):
+    for k in range(1, args.val_scrambles + 1):
         for _ in range(ncubes_per_depth):
             cube = Cube.cube_qtm()
             cube.scramble(k)

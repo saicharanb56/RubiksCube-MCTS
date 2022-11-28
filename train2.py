@@ -43,13 +43,17 @@ parser.add_argument('--save_path',
                     type=str,
                     help="Folder in which results are stored")
 parser.add_argument('--vfreq',
-                    default=10,
+                    default=20,
                     type=int,
                     help="Frequency of validation step (per n epochs)")
 parser.add_argument('--update_freq',
                     default=100,
                     type=int,
                     help="Frequency of soft update")
+parser.add_argument('--val_scrambles',
+                    default=30,
+                    type=int,
+                    help='Number of scrambles of cube during validation(k)')
 
 
 def init_weights(m):
@@ -148,14 +152,20 @@ def adi(args,
         losses_ce = resume_state['ce_losses']
         losses_mse = resume_state['mse_losses']
         startEpoch = resume_state['epoch'] + 1
+        val_scores = resume_state['val_scores']
         # instantiate saveBestModels with best loss being min of previous losses
-        best_loss = np.min(np.array(losses_ce) + np.array(losses_mse))
-        saveBestModel = SaveBestModel(best_loss)
+        # best_loss = np.min(np.array(losses_ce) + np.array(losses_mse))
+        # saveBestModel = SaveBestModel(best_loss)
+        amortized_score = 2 * (
+            val_scores[-1] * np.arange(1, args.val_scrambles + 1)).sum() / (
+                args.val_scrambles) / (args.val_scrambles + 1)
+        saveBestModel = SaveBestModel(-amortized_score)
     else:
         init_weights(model)
         soft_update(model, model_target, 1.0)
         losses_ce = []
         losses_mse = []
+        val_scores = []
         startEpoch = 0
         # instantiate saveBestModels
         saveBestModel = SaveBestModel()
@@ -206,7 +216,7 @@ def adi(args,
 
             # set labels to be maximal value from each children state
             v_label, idx = torch.max(rewards_all_actions + v_out *
-                                     (rewards_all_actions < 0).float(),
+                                     (rewards_all_actions < 0),
                                      dim=1)
             p_label = idx.squeeze(dim=1)
 
@@ -248,10 +258,16 @@ def adi(args,
                 f"scramble depth {i+1} ::: {x:.3%}"
                 for (i, x) in enumerate(score)
             ]))
+            val_scores.append(score)
 
-        # save best models
-        saveBestModel(args, losses_ce[-1] + losses_mse[-1], epoch, model,
-                      model_target, optimizer, losses_ce, losses_mse)
+            # save best models
+            # saveBestModel(args, losses_ce[-1] + losses_mse[-1], epoch, model,
+            #               model_target, optimizer, losses_ce, losses_mse)
+            amortized_score = 2 * (val_scores[-1] * np.arange(
+                1, args.val_scrambles + 1)).mean() / (args.val_scrambles) / (
+                    args.val_scrambles + 1)
+            saveBestModel(args, amortized_score, epoch, model, model_target,
+                          optimizer, losses_ce, losses_mse)
 
         # save this epoch's model and delete previous epoch's model
         state = {
@@ -260,6 +276,7 @@ def adi(args,
             'optimizer': optimizer.state_dict(),
             'ce_losses': losses_ce,
             'mse_losses': losses_mse,
+            'val_scores': val_scores,
             'epoch': epoch
         }
         torch.save(
