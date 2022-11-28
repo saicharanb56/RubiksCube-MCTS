@@ -267,9 +267,10 @@ def adi(args,
         if os.path.exists(
                 os.path.join(args.save_path,
                              'checkpoint_' + str(epoch) + '.pt')):
-            os.remove(
-                os.path.join(args.save_path,
-                             'checkpoint_' + str(epoch) + '.pt'))
+            if (epoch + 1) % 1000 != 0:
+                os.remove(
+                    os.path.join(args.save_path,
+                                'checkpoint_' + str(epoch) + '.pt'))
 
     return model
 
