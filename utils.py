@@ -15,7 +15,7 @@ class SaveBestModel:
         self.best_loss = best_loss
 
     def __call__(self, args, current_loss, epoch, model, model_target,
-                 optimizer, ce_losses, mse_losses):
+                 optimizer, ce_losses, mse_losses, val_scores):
         if current_loss < self.best_loss:
             for file in os.listdir(args.save_path):
                 if file.startswith('best_'):
@@ -30,6 +30,7 @@ class SaveBestModel:
                 'optimizer': optimizer.state_dict(),
                 'ce_losses': ce_losses,
                 'mse_losses': mse_losses,
+                'val_scores': val_scores,
                 'epoch': epoch
             }
             torch.save(
