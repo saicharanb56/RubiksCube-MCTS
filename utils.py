@@ -86,7 +86,7 @@ def generate_child_states(args, cube, n_actions, states):
     return child_states, rewards
 
 
-def validate(args, model, ncubes_per_depth=10, nscrambles=30, max_nmoves=50):
+def validate(args, model, ncubes_per_depth=100, nscrambles=30, max_nmoves=50):
     '''
     Validate performance of model
     '''
