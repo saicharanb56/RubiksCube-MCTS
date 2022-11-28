@@ -267,7 +267,7 @@ def adi(args,
                 1, args.val_scrambles + 1)).mean() / (args.val_scrambles) / (
                     args.val_scrambles + 1)
             saveBestModel(args, -amortized_score, epoch, model, model_target,
-                          optimizer, losses_ce, losses_mse)
+                          optimizer, losses_ce, losses_mse, val_scores)
 
         # save this epoch's model and delete previous epoch's model
         state = {
