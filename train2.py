@@ -43,7 +43,7 @@ parser.add_argument('--save_path',
                     type=str,
                     help="Folder in which results are stored")
 parser.add_argument('--vfreq',
-                    default=20,
+                    default=50,
                     type=int,
                     help="Frequency of validation step (per n epochs)")
 parser.add_argument('--update_freq',
