@@ -266,7 +266,7 @@ def adi(args,
             amortized_score = 2 * (val_scores[-1] * np.arange(
                 1, args.val_scrambles + 1)).mean() / (args.val_scrambles) / (
                     args.val_scrambles + 1)
-            saveBestModel(args, amortized_score, epoch, model, model_target,
+            saveBestModel(args, -amortized_score, epoch, model, model_target,
                           optimizer, losses_ce, losses_mse)
 
         # save this epoch's model and delete previous epoch's model
