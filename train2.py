@@ -7,6 +7,8 @@ import os
 import time
 from rubikscube import Cube
 
+from torch.utils.tensorboard import SummaryWriter
+
 from utils import SaveBestModel, validate
 
 parser = argparse.ArgumentParser()
@@ -140,6 +142,9 @@ def adi(args,
     assert n_actions == 12 or n_actions == 18
     assert cube.solved()
 
+    # Instantiate writer object
+    writer = SummaryWriter()
+
     model = model.to(args.device)
     model_target = model_target.to(args.device)
 
@@ -269,6 +274,8 @@ def adi(args,
             saveBestModel(args, -amortized_score, epoch, model, model_target,
                           optimizer, losses_ce, losses_mse, val_scores)
 
+            writer.add_histogram('ValidationScore', score, (epoch // args.vfreq) + 1)
+
         # save this epoch's model and delete previous epoch's model
         state = {
             'state_dict': model.state_dict(),
@@ -290,6 +297,11 @@ def adi(args,
                 os.remove(
                     os.path.join(args.save_path,
                                  'checkpoint_' + str(epoch) + '.pt'))
+
+        # send stuff to Tensorboard
+        writer.add_scalar('TrainLoss/CrossEntropy', losses_ce[-1], epoch + 1)
+        writer.add_scalar('TrainLoss/MeanSquareError', losses_mse[-1], epoch + 1)
+        writer.add_scalar('TotalLoss', losses_ce[-1] + losses_mse[-1], epoch + 1)
 
     return model
 
