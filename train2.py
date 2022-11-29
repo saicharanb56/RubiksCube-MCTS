@@ -276,7 +276,7 @@ def adi(args,
             
             ngraphs = 6
             for i, split in enumerate(np.split(score, ngraphs)):
-                writer.add_scalars('Validation/Scores', { f"scramble_depth {ngraphs*i + j + 1}": x for (j,x) in enumerate(split)},
+                writer.add_scalars(f'Validation/Scores_{6*i}_{6*i+6}', { f"scramble_depth {ngraphs*i + j + 1}": x for (j,x) in enumerate(split)},
                                 (epoch // args.vfreq) + 1)
             
             writer.add_scalar('Validation/AmortizedScore', amortized_score, (epoch // args.vfreq) + 1)
