@@ -274,7 +274,9 @@ def adi(args,
             saveBestModel(args, -amortized_score, epoch, model, model_target,
                           optimizer, losses_ce, losses_mse, val_scores)
 
-            writer.add_histogram('ValidationScore', score, (epoch // args.vfreq) + 1)
+            writer.add_scalars('Validation/Scores', { f"scramble_depth {i + 1}": score[i] for i in range(len(score))},
+                                (epoch // args.vfreq) + 1)
+            writer.add_scalar('Validation/AmortizedScore', amortized_score, (epoch // args.vfreq) + 1)
 
         # save this epoch's model and delete previous epoch's model
         state = {
