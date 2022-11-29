@@ -56,7 +56,8 @@ parser.add_argument('--val_scrambles',
                     default=30,
                     type=int,
                     help='Number of scrambles of cube during validation(k)')
-
+parser.add_argument('--run_desc', default='', type=str,
+                    help='Summary writer comment describing current run')
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
@@ -143,7 +144,7 @@ def adi(args,
     assert cube.solved()
 
     # Instantiate writer object
-    writer = SummaryWriter()
+    writer = SummaryWriter(comment=args.run_desc)
 
     model = model.to(args.device)
     model_target = model_target.to(args.device)
@@ -306,6 +307,15 @@ def adi(args,
         writer.add_scalar('TrainLoss/CrossEntropy', losses_ce[-1], epoch + 1)
         writer.add_scalar('TrainLoss/MeanSquareError', losses_mse[-1], epoch + 1)
         writer.add_scalar('TotalLoss', losses_ce[-1] + losses_mse[-1], epoch + 1)
+
+        # print gradient norms
+        total_norm = 0.0
+        for p in model.parameters():
+            param_norm = p.grad.detach().data.norm(2)
+            total_norm += param_norm.item() ** 2
+
+        total_norm = total_norm ** 0.5
+        print("Gradient norm = ", total_norm)
 
     return model
 
