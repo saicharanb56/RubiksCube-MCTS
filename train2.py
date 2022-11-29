@@ -31,7 +31,7 @@ parser.add_argument('--gpu', default='0', type=str)
 parser.add_argument('--wd', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
 parser.add_argument('--tau',
-                    default=0.95,
+                    default=1.0,
                     type=float,
                     help="Interpolation parameter in soft update")
 parser.add_argument('--device', default="cuda", type=str)
@@ -49,7 +49,7 @@ parser.add_argument('--vfreq',
                     type=int,
                     help="Frequency of validation step (per n epochs)")
 parser.add_argument('--update_freq',
-                    default=100,
+                    default=1000,
                     type=int,
                     help="Frequency of soft update")
 parser.add_argument('--val_scrambles',
@@ -153,7 +153,7 @@ def adi(args,
     if args.resume_path:
         resume_state = torch.load(args.resume_path, map_location=args.device)
         model.load_state_dict(resume_state['state_dict'])
-        model_target.load_state_dict(resume_state['target_state_dict'])
+        model_target.load_state_dict(resume_state['state_dict'])
         optimizer.load_state_dict(resume_state['optimizer'])
         losses_ce = resume_state['ce_losses']
         losses_mse = resume_state['mse_losses']
@@ -284,7 +284,6 @@ def adi(args,
         # save this epoch's model and delete previous epoch's model
         state = {
             'state_dict': model.state_dict(),
-            'target_state_dict': model_target.state_dict(),
             'optimizer': optimizer.state_dict(),
             'ce_losses': losses_ce,
             'mse_losses': losses_mse,

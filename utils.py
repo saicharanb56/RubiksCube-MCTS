@@ -26,7 +26,6 @@ class SaveBestModel:
             print(f"Saving best model for epoch: {epoch+1}\n")
             state = {
                 'state_dict': model.state_dict(),
-                'target_state_dict': model_target.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'ce_losses': ce_losses,
                 'mse_losses': mse_losses,
