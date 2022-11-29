@@ -274,9 +274,8 @@ def adi(args,
             saveBestModel(args, -amortized_score, epoch, model, model_target,
                           optimizer, losses_ce, losses_mse, val_scores)
             
-            ngraphs = 6
-            for i, split in enumerate(np.split(score, ngraphs)):
-                writer.add_scalars(f'Validation/Scores_{6*i}_{6*i+6}', { f"scramble_depth {ngraphs*i + j + 1}": x for (j,x) in enumerate(split)},
+            for i, split in enumerate(np.split(score, 6)):
+                writer.add_scalars(f'Validation/Scores_{5*i+1}_{5*i+5}', { f"scramble_depth {5*i + j + 1}": x for (j,x) in enumerate(split)},
                                 (epoch // args.vfreq) + 1)
             
             writer.add_scalar('Validation/AmortizedScore', amortized_score, (epoch // args.vfreq) + 1)
