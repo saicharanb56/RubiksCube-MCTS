@@ -273,9 +273,12 @@ def adi(args,
                     args.val_scrambles + 1)
             saveBestModel(args, -amortized_score, epoch, model, model_target,
                           optimizer, losses_ce, losses_mse, val_scores)
-
-            writer.add_scalars('Validation/Scores', { f"scramble_depth {i + 1}": score[i] for i in range(len(score))},
+            
+            ngraphs = 6
+            for i, split in enumerate(np.split(score, ngraphs)):
+                writer.add_scalars('Validation/Scores', { f"scramble_depth {ngraphs*i + j + 1}": x for (j,x) in enumerate(split)},
                                 (epoch // args.vfreq) + 1)
+            
             writer.add_scalar('Validation/AmortizedScore', amortized_score, (epoch // args.vfreq) + 1)
 
         # save this epoch's model and delete previous epoch's model
