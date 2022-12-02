@@ -56,8 +56,16 @@ parser.add_argument('--val_scrambles',
                     default=30,
                     type=int,
                     help='Number of scrambles of cube during validation(k)')
-parser.add_argument('--run_desc', default='', type=str,
+parser.add_argument('--run_desc',
+                    default='',
+                    type=str,
                     help='Summary writer comment describing current run')
+parser.add_argument('--sampling_method',
+                    default='custom',
+                    choices=['custom', 'paper'],
+                    type=str,
+                    help='The sampling method used in training')
+
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
@@ -89,16 +97,29 @@ def generate_scrambled_states(args):
 
     scrambled_states = []
     weights = []
-    # generate list of scrambled_states
-    for _ in range(args.nsequences):
-        # define state, current_state is stored in env instance
-        for d in range(args.nscrambles):
-            cube.scramble(d + 1)
-            cur_state = cube.get_state()  # parent state for this iteration
-            scrambled_states.append(cur_state)
-            weights.append(1 / (d + 1))
+    if args.sampling_method == 'custom':
+        # generate list of scrambled_states
+        for _ in range(args.nsequences):
+            # define state, current_state is stored in env instance
+            for d in range(args.nscrambles):
+                cube.scramble(d + 1)
+                cur_state = cube.get_state()  # parent state for this iteration
+                scrambled_states.append(cur_state)
+                weights.append(1 / (d + 1))
 
-            # set cube back to solved state
+                # set cube back to solved state
+                cube = Cube.cube_qtm()
+    else:
+        # generate list of scrambled_states
+        for _ in range(args.nsequences):
+            # define state, current_state is stored in env instance
+            for d in range(1, args.nscrambles + 1):
+                cube.scramble(1)
+                cur_state = cube.get_state()  # parent state for this iteration
+                scrambled_states.append(cur_state)
+                weights.append(1 / d)
+
+                # set cube back to solved state
             cube = Cube.cube_qtm()
 
     return scrambled_states, weights
@@ -274,12 +295,16 @@ def adi(args,
                     args.val_scrambles + 1)
             saveBestModel(args, -amortized_score, epoch, model, model_target,
                           optimizer, losses_ce, losses_mse, val_scores)
-            
+
             for i, split in enumerate(np.split(score, 6)):
-                writer.add_scalars(f'Validation/Scores_{5*i+1}_{5*i+5}', { f"scramble_depth {5*i + j + 1}": x for (j,x) in enumerate(split)},
-                                (epoch // args.vfreq) + 1)
-            
-            writer.add_scalar('Validation/AmortizedScore', amortized_score, (epoch // args.vfreq) + 1)
+                writer.add_scalars(
+                    f'Validation/Scores_{5*i+1}_{5*i+5}', {
+                        f"scramble_depth {5*i + j + 1}": x
+                        for (j, x) in enumerate(split)
+                    }, (epoch // args.vfreq) + 1)
+
+            writer.add_scalar('Validation/AmortizedScore', amortized_score,
+                              (epoch // args.vfreq) + 1)
 
         # save this epoch's model and delete previous epoch's model
         state = {
@@ -304,16 +329,18 @@ def adi(args,
 
         # send stuff to Tensorboard
         writer.add_scalar('TrainLoss/CrossEntropy', losses_ce[-1], epoch + 1)
-        writer.add_scalar('TrainLoss/MeanSquareError', losses_mse[-1], epoch + 1)
-        writer.add_scalar('TotalLoss', losses_ce[-1] + losses_mse[-1], epoch + 1)
+        writer.add_scalar('TrainLoss/MeanSquareError', losses_mse[-1],
+                          epoch + 1)
+        writer.add_scalar('TotalLoss', losses_ce[-1] + losses_mse[-1],
+                          epoch + 1)
 
         # print gradient norms
         total_norm = 0.0
         for p in model.parameters():
             param_norm = p.grad.detach().data.norm(2)
-            total_norm += param_norm.item() ** 2
+            total_norm += param_norm.item()**2
 
-        total_norm = total_norm ** 0.5
+        total_norm = total_norm**0.5
         print("Gradient norm = ", total_norm)
 
     return model
