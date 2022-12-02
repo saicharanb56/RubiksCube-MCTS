@@ -364,7 +364,7 @@ if __name__ == "__main__":
     lossfn_val = nn.MSELoss(reduction='none')
     lossfn_prob = nn.CrossEntropyLoss(reduction='none')
 
-    #Instantiate env
+    # Instantiate env
     cube = Cube.cube_qtm()
 
     print('ADI started')
