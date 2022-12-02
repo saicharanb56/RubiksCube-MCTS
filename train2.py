@@ -119,7 +119,7 @@ def generate_scrambled_states(args):
                 scrambled_states.append(cur_state)
                 weights.append(1 / d)
 
-                # set cube back to solved state
+            # set cube back to solved state
             cube = Cube.cube_qtm()
 
     return scrambled_states, weights
