@@ -19,16 +19,16 @@ parser.add_argument('--nepochs',
                     default=50000,
                     type=int,
                     help='Number of ADI epochs (M)')
-parser.add_argument('--nscrambles',
+parser.add_argument('--number_scrambles',
                     default=50,
                     type=int,
                     help='Number of scrambles of cube (k)')
-parser.add_argument('--nsequences',
+parser.add_argument('--number_sequences',
                     default=100,
                     type=int,
                     help='Number of sequences of scrambles (l)')
 parser.add_argument('--gpu', default='0', type=str)
-parser.add_argument('--wd', default=0, type=int, help="Weight decay")
+parser.add_argument('--weight_decay', default=0, type=int, help="Weight decay")
 parser.add_argument('--momentum', default=0, type=int, help="Momentum")
 parser.add_argument('--tau',
                     default=1.0,
@@ -44,19 +44,19 @@ parser.add_argument('--save_path',
                     default="results/",
                     type=str,
                     help="Folder in which results are stored")
-parser.add_argument('--vfreq',
+parser.add_argument('--validation_frequence',
                     default=50,
                     type=int,
                     help="Frequency of validation step (per n epochs)")
-parser.add_argument('--update_freq',
+parser.add_argument('--update_frequence',
                     default=1000,
                     type=int,
                     help="Frequency of soft update")
-parser.add_argument('--val_scrambles',
+parser.add_argument('--validation_scrambles',
                     default=30,
                     type=int,
                     help='Number of scrambles of cube during validation(k)')
-parser.add_argument('--run_desc',
+parser.add_argument('--run_description',
                     default='',
                     type=str,
                     help='Summary writer comment describing current run')
@@ -99,9 +99,9 @@ def generate_scrambled_states(args):
     weights = []
     if args.sampling_method == 'custom':
         # generate list of scrambled_states
-        for _ in range(args.nsequences):
+        for _ in range(args.number_sequences):
             # define state, current_state is stored in env instance
-            for d in range(args.nscrambles):
+            for d in range(args.number_scrambles):
                 cube.scramble(d + 1)
                 cur_state = cube.get_state()  # parent state for this iteration
                 scrambled_states.append(cur_state)
@@ -111,9 +111,9 @@ def generate_scrambled_states(args):
                 cube = Cube.cube_qtm()
     else:
         # generate list of scrambled_states
-        for _ in range(args.nsequences):
+        for _ in range(args.number_sequences):
             # define state, current_state is stored in env instance
-            for d in range(1, args.nscrambles + 1):
+            for d in range(1, args.number_scrambles + 1):
                 cube.scramble(1)
                 cur_state = cube.get_state()  # parent state for this iteration
                 scrambled_states.append(cur_state)
@@ -165,7 +165,7 @@ def adi(args,
     assert cube.solved()
 
     # Instantiate writer object
-    writer = SummaryWriter(comment=args.run_desc)
+    writer = SummaryWriter(comment=args.run_description)
 
     model = model.to(args.device)
     model_target = model_target.to(args.device)
@@ -183,9 +183,9 @@ def adi(args,
         # instantiate saveBestModels with best loss being min of previous losses
         # best_loss = np.min(np.array(losses_ce) + np.array(losses_mse))
         # saveBestModel = SaveBestModel(best_loss)
-        amortized_score = 2 * (
-            val_scores[-1] * np.arange(1, args.val_scrambles + 1)).sum() / (
-                args.val_scrambles) / (args.val_scrambles + 1)
+        amortized_score = 2 * (val_scores[-1] * np.arange(
+            1, args.validation_scrambles + 1)).sum() / (
+                args.validation_scrambles) / (args.validation_scrambles + 1)
         saveBestModel = SaveBestModel(-amortized_score)
     else:
         init_weights(model)
@@ -200,7 +200,7 @@ def adi(args,
     for epoch in range(startEpoch, args.nepochs):
         tic = time.time()
 
-        batch_size = args.nscrambles * args.nsequences
+        batch_size = args.number_scrambles * args.number_sequences
 
         # generate N = K*L scrambled states
         scrambled_states, weights = generate_scrambled_states(args)
@@ -274,11 +274,11 @@ def adi(args,
                                                        losses_mse[-1],
                                                        time.time() - tic))
 
-        if (epoch + 1) % args.update_freq == 0:
+        if (epoch + 1) % args.update_frequence == 0:
             soft_update(model, model_target, tau=args.tau)
 
         # validation
-        if (epoch + 1) % args.vfreq == 0:
+        if (epoch + 1) % args.validation_frequence == 0:
             score = validate(args, model)
             print("Validation scores")
             print("\n".join([
@@ -291,8 +291,9 @@ def adi(args,
             # saveBestModel(args, losses_ce[-1] + losses_mse[-1], epoch, model,
             #               model_target, optimizer, losses_ce, losses_mse)
             amortized_score = 2 * (val_scores[-1] * np.arange(
-                1, args.val_scrambles + 1)).mean() / (args.val_scrambles) / (
-                    args.val_scrambles + 1)
+                1, args.validation_scrambles + 1)).mean() / (
+                    args.validation_scrambles) / (args.validation_scrambles +
+                                                  1)
             saveBestModel(args, -amortized_score, epoch, model, model_target,
                           optimizer, losses_ce, losses_mse, val_scores)
 
@@ -301,10 +302,10 @@ def adi(args,
                     f'Validation/Scores_{5*i+1}_{5*i+5}', {
                         f"scramble_depth {5*i + j + 1}": x
                         for (j, x) in enumerate(split)
-                    }, (epoch // args.vfreq) + 1)
+                    }, (epoch // args.validation_frequence) + 1)
 
             writer.add_scalar('Validation/AmortizedScore', amortized_score,
-                              (epoch // args.vfreq) + 1)
+                              (epoch // args.validation_frequence) + 1)
 
         # save this epoch's model and delete previous epoch's model
         state = {
@@ -359,7 +360,7 @@ if __name__ == "__main__":
 
     optimizer = optim.RMSprop(model.parameters(),
                               lr=args.lr,
-                              weight_decay=args.wd,
+                              weight_decay=args.weight_decay,
                               momentum=args.momentum)
     lossfn_val = nn.MSELoss(reduction='none')
     lossfn_prob = nn.CrossEntropyLoss(reduction='none')
