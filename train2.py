@@ -343,6 +343,8 @@ def adi(args,
         total_norm = total_norm**0.5
         print("Gradient norm = ", total_norm)
 
+        writer.add_scalar('TotalLoss/GradientNorm', total_norm, epoch + 1)
+
     return model
 
 
