@@ -105,10 +105,20 @@ def generate_scrambled_states(args):
                 cube.scramble(d + 1)
                 cur_state = cube.get_state()  # parent state for this iteration
                 scrambled_states.append(cur_state)
-                weights.append(1 / (d + 1))
+                weights.append(1 / min((d + 1), 26))
 
                 # set cube back to solved state
                 cube = Cube.cube_qtm()
+
+            # add a state at 100 scrambles to each sequence
+            cube.scramble(100)
+            cur_state = cube.get_state()  # parent state for this iteration
+            scrambled_states.append(cur_state)
+            weights.append(1 / 26)
+
+            # set cube back to solved state
+            cube = Cube.cube_qtm()
+            
     else:
         # generate list of scrambled_states
         for _ in range(args.number_sequences):
@@ -117,7 +127,16 @@ def generate_scrambled_states(args):
                 cube.scramble(1)
                 cur_state = cube.get_state()  # parent state for this iteration
                 scrambled_states.append(cur_state)
-                weights.append(1 / d)
+                weights.append(1 / min(d, 26))
+
+            # set cube back to solved state
+            cube = Cube.cube_qtm()
+
+        for _ in range(args.number_sequences):
+            cube.scramble(100)
+            cur_state = cube.get_state()  # parent state for this iteration
+            scrambled_states.append(cur_state)
+            weights.append(1 / 26)
 
             # set cube back to solved state
             cube = Cube.cube_qtm()
