@@ -16,11 +16,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', default=10000, type=int)
 parser.add_argument('--lr', default=5e-4, type=float)
 parser.add_argument('--nepochs',
-                    default=50000,
+                    default=100000,
                     type=int,
                     help='Number of ADI epochs (M)')
 parser.add_argument('--number_scrambles',
-                    default=50,
+                    default=100,
                     type=int,
                     help='Number of scrambles of cube (k)')
 parser.add_argument('--number_sequences',
@@ -61,7 +61,7 @@ parser.add_argument('--run_description',
                     type=str,
                     help='Summary writer comment describing current run')
 parser.add_argument('--sampling_method',
-                    default='custom',
+                    default='paper',
                     choices=['custom', 'paper'],
                     type=str,
                     help='The sampling method used in training')
@@ -128,15 +128,6 @@ def generate_scrambled_states(args):
                 cur_state = cube.get_state()  # parent state for this iteration
                 scrambled_states.append(cur_state)
                 weights.append(1 / min(d, 26))
-
-            # set cube back to solved state
-            cube = Cube.cube_qtm()
-
-        for _ in range(args.number_sequences):
-            cube.scramble(100)
-            cur_state = cube.get_state()  # parent state for this iteration
-            scrambled_states.append(cur_state)
-            weights.append(1 / 26)
 
             # set cube back to solved state
             cube = Cube.cube_qtm()
