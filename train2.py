@@ -249,10 +249,10 @@ def adi(args,
 
         # forward pass
         with torch.no_grad():
-            v_out = model_target.values(
+            batched_v_out = model_target.values(
                 next_states_flattened
             )  # next_states shape is (batchsize, n_actions, 480)
-            v_out = v_out.view(-1, 12, 480)
+            v_out = batched_v_out.view(-1, 12, 480)
 
             print("Val mean: ", v_out.mean(dim=0))
 
