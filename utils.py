@@ -89,6 +89,7 @@ def validate(args, model, ncubes_per_depth=100, max_nmoves=50):
     '''
     Validate performance of model
     '''
+    model.eval()
     solved_count = np.zeros(args.validation_scrambles)
     # generate ncubes_per_depth states for each depth level
     for k in range(1, args.validation_scrambles + 1):

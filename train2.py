@@ -260,6 +260,7 @@ def adi(args,
             p_label = idx.squeeze(dim=1)
 
         # training
+        model.train()
         input_states = generate_input_states(cube, scrambled_states)
         input_states = input_states.to(args.device)
 
