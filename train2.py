@@ -1,7 +1,7 @@
 import numpy as np
 from torch import nn, optim
 import torch
-from model import NNet
+from model import NNet, ResnetModel
 import argparse
 import os
 import time
@@ -368,10 +368,10 @@ if __name__ == "__main__":
     device = torch.device(args.device)
 
     # Instantiate model, optimizer, loss functions
-    model = NNet()
-    model_target = NNet()
+    model = ResnetModel(batch_norm=False)
+    model_target = ResnetModel(batch_norm=False)
 
-    optimizer = optim.RMSprop(model.parameters(),
+    optimizer = optim.Adam(model.parameters(),
                               lr=args.lr,
                               weight_decay=args.weight_decay,
                               momentum=args.momentum)
