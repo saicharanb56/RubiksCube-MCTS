@@ -252,7 +252,7 @@ def adi(args,
             batched_v_out = model_target.values(
                 next_states_flattened
             )  # next_states shape is (batchsize, n_actions, 480)
-            v_out = batched_v_out.view(-1, 12, 480)
+            v_out = batched_v_out.view(-1, 12, 1)
 
             print("Val mean: ", v_out.mean(dim=0))
 
