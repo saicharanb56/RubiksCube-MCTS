@@ -130,7 +130,7 @@ class ResnetModel(nn.Module):
 
         # final layer
         self.fc_v = nn.Linear(resnet_dim, value_out_dim)
-        self.fc_p = nn.Linear(resnet_dim, policy_out_dim)
+        self.fc_l = nn.Linear(resnet_dim, policy_out_dim)
 
     def backbone(self, x):
 
@@ -165,10 +165,10 @@ class ResnetModel(nn.Module):
         x = self.backbone(x)
         return self.fc_v(x)
 
-    def policy(self, x):
+    def logits(self, x):
         x = self.backbone(x)
-        return self.fc_p(x)
+        return self.fc_l(x)
 
     def forward(self, x):
         x = self.backbone(x)
-        return self.fc_p(x), self.fc_v(x)
+        return self.fc_l(x), self.fc_v(x)
