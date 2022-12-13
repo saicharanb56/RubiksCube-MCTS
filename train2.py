@@ -245,11 +245,14 @@ def adi(args,
                 # set state back to parent state
                 cube.set_state(cur_state)
 
+        next_states_flattened = next_states.view(-1, 480)
+
         # forward pass
         with torch.no_grad():
             v_out = model_target.values(
-                next_states
+                next_states_flattened
             )  # next_states shape is (batchsize, n_actions, 480)
+            v_out = v_out.view(-1, 12, 480)
 
             print("Val mean: ", v_out.mean(dim=0))
 
@@ -372,8 +375,7 @@ if __name__ == "__main__":
     model = ResnetModel(batch_norm=False)
     model_target = ResnetModel(batch_norm=False)
 
-    optimizer = optim.Adam(model.parameters(),
-                              lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
     lossfn_val = nn.MSELoss(reduction='none')
     lossfn_prob = nn.CrossEntropyLoss(reduction='none')
 
