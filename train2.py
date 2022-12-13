@@ -373,9 +373,7 @@ if __name__ == "__main__":
     model_target = ResnetModel(batch_norm=False)
 
     optimizer = optim.Adam(model.parameters(),
-                              lr=args.lr,
-                              weight_decay=args.weight_decay,
-                              momentum=args.momentum)
+                              lr=args.lr)
     lossfn_val = nn.MSELoss(reduction='none')
     lossfn_prob = nn.CrossEntropyLoss(reduction='none')
 
