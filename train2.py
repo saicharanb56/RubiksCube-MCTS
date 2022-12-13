@@ -118,7 +118,7 @@ def generate_scrambled_states(args):
 
             # set cube back to solved state
             cube = Cube.cube_qtm()
-            
+
     else:
         # generate list of scrambled_states
         for _ in range(args.number_sequences):
@@ -207,6 +207,8 @@ def adi(args,
         # instantiate saveBestModels
         saveBestModel = SaveBestModel()
 
+    model_target.eval()
+
     for epoch in range(startEpoch, args.nepochs):
         tic = time.time()
 
@@ -286,6 +288,7 @@ def adi(args,
 
         if (epoch + 1) % args.update_frequence == 0:
             soft_update(model, model_target, tau=args.tau)
+            model_target.eval()
 
         # validation
         if (epoch + 1) % args.validation_frequence == 0:

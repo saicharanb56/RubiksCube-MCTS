@@ -9,3 +9,6 @@ Cargo.lock
 **/__pycache__
 results/
 runs/
+
+test_cube.py
+
