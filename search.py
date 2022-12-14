@@ -482,7 +482,7 @@ if __name__ == '__main__':
     else:
         model = ResnetModel(batch_norm=False)
     
-    checkpoint = torch.load('checkpoint_82999.pt', map_location='cpu')
+    checkpoint = torch.load(args.load_path, map_location='cpu')
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
 
