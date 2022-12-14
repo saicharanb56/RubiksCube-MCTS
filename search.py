@@ -467,7 +467,7 @@ def solve(rank,
 
 if __name__ == '__main__':
 
-    model = NNet()
+    model = ResnetModel(batch_norm=False)
     checkpoint = torch.load('checkpoint_82999.pt', map_location='cpu')
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
