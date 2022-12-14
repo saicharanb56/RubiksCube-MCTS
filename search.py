@@ -5,6 +5,7 @@ from collections import defaultdict
 from copy import copy, deepcopy
 from typing import List, Tuple, Union
 
+import argparse
 import numpy as np
 import torch
 import torch.distributed.rpc as rpc
@@ -13,7 +14,16 @@ from numpy.typing import NDArray
 from rubikscube import Cube
 from torch.distributed.rpc import RRef, remote, rpc_async, rpc_sync
 
-from model import NNet
+from model import NNet, ResnetModel
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--load_path', type=str)
+parser.add_argument('--c', default=5.0, type=float)
+parser.add_argument('--mu', default=1.0, type=float)
+parser.add_argument('--network', default='simple', type=str)
+
+args = parser.parse_args()
 
 NUM_ACTIONS = 12
 INT_TO_ACTIONS = Cube.cube_qtm().get_turns()
@@ -34,7 +44,7 @@ class State:
                  value: float,
                  cube_state,
                  representation: Tuple[int, ...],
-                 c=5) -> None:
+                 c=args.c) -> None:
         self._representation: Tuple[int, ...] = copy(representation)
         self._cube_state = copy(cube_state)
 
@@ -68,7 +78,7 @@ class Node:
     def __init__(self, p, v, cube_state, repr, terminal) -> None:
         self._state = State(p, v, cube_state, repr)
         self.terminal = terminal
-        self.mu = 1
+        self.mu = args.mu
 
         if not self.terminal:
             self._children = [None] * NUM_ACTIONS
@@ -467,7 +477,11 @@ def solve(rank,
 
 if __name__ == '__main__':
 
-    model = ResnetModel(batch_norm=False)
+    if args.network == 'simple':
+        model = NNet()
+    else:
+        model = ResnetModel(batch_norm=False)
+    
     checkpoint = torch.load('checkpoint_82999.pt', map_location='cpu')
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
