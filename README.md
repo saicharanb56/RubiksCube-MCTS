@@ -5,3 +5,7 @@ Solving the Rubik's cube by training a deep neural network and implementing an M
 ```
 make develop-pyo3
 ```
+# Running search
+```
+python search.py --load_path "/path/to/checkpoint.pt"
+```
