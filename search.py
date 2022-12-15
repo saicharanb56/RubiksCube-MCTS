@@ -22,6 +22,7 @@ parser.add_argument('--load_path', type=str)
 parser.add_argument('--c', default=5.0, type=float)
 parser.add_argument('--mu', default=1.0, type=float)
 parser.add_argument('--network', default='simple', type=str)
+parser.add_argument('--test_depth', default=17, type=int)
 
 args = parser.parse_args()
 
@@ -489,7 +490,7 @@ if __name__ == '__main__':
     # np.random.seed(17)
 
     cube = Cube.cube_qtm()
-    scramble_list = np.random.choice(cube.get_turns(), 17)
+    scramble_list = np.random.choice(cube.get_turns(), args.test_depth)
     logging.info(f"scramble list ::: {scramble_list}")
 
     for m in scramble_list:
